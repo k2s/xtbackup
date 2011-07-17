@@ -7,7 +7,7 @@ class Compare_Sqlite implements Compare_Interface, Iterator
      */
     protected $_engine;
     /**
-     * @var Output_Empty
+     * @var Output_Stack
      */
     protected $_out;
     /**
@@ -42,6 +42,9 @@ class Compare_Sqlite implements Compare_Interface, Iterator
      */
     protected $_jobPosition = 0;
 
+    /**
+     * @var SQLite3Result
+     */
     protected $_jobSqlResult;
     protected $_job;
 
@@ -301,7 +304,7 @@ class Compare_Sqlite implements Compare_Interface, Iterator
         // delete invalid rows
         $this->_exec("DELETE FROM {$this->_prefix} WHERE local=0 and remote=0");
 
-        // update missing md5 for local files where needed
+        // update missing md5 for remote files where needed
         $this->_out->logNotice(">>>starting update md5 of remote files ...");
         $stmt = $this->_db->query($this->_sql(<<<SQL
 SELECT path FROM {$this->_prefix} WHERE local and remote and rmd5 is null and (rtime<>ltime or rtime is null)
@@ -310,6 +313,7 @@ SQL
         $driver = $drivers['remote'];
         $counter = 0;
         $job = $this->_out->jobStart("we need to calculate md5 for files");
+        $this->_out->jobSetProgressStep($job, 50);
         while ($row = $stmt->fetchArray())
         {
             $fullPath = $driver->getBaseDir() . $row['path'];
@@ -319,9 +323,8 @@ SQL
                 $this->_prepFromRemoteMd5->bindValue(":md5", $md5);
                 $this->_prepFromRemoteMd5->bindValue(":path", $row['path']);
                 $this->_prepFromRemoteMd5->execute();
-                if (!fmod($counter, 50)) {
-                    $this->_out->jobStep();
-                }
+
+                $this->_out->jobStep($job);
                 $counter++;
             }
         }
@@ -332,13 +335,14 @@ SQL
         // update missing md5 for local files where needed
         $this->_out->logNotice(">>>starting update md5 of local files ...");
         $stmt = $this->_db->query($this->_sql(<<<SQL
-SELECT path FROM {$this->_prefix} WHERE local and remote and rtime<>ltime
+SELECT path FROM {$this->_prefix} WHERE local and remote and (rtime<>ltime or rtime is null)
 SQL
         ));
 
         $driver = $drivers['local'];
         $counter = 0;
         $job = $this->_out->jobStart("we need to calculate md5 for files");
+        $this->_out->jobSetProgressStep($job, 50);
         while ($row = $stmt->fetchArray())
         {
             $fullPath = $driver->getBaseDir() . $row['path'];
@@ -348,9 +352,8 @@ SQL
                 $this->_prepFromLocalMd5->bindValue(":md5", $md5);
                 $this->_prepFromLocalMd5->bindValue(":path", $row['path']);
                 $this->_prepFromLocalMd5->execute();
-                if (!fmod($counter, 50)) {
-                    $this->_out->jobStep();
-                }
+
+                $this->_out->jobStep($job);
                 $counter++;
             }
         }
@@ -374,11 +377,13 @@ SQL
                 // and its results will be returned on each Iterator::next()
                 // the $storageType defines if we want to receive changes for local or remote storage
                 $sql = <<<SQL
-SELECT path, 'delete' as action FROM {$this->_prefix} WHERE remote and local=0
+SELECT path, ltime, 'delete' as action FROM {$this->_prefix} WHERE remote and local=0
 UNION
-SELECT path, 'mkdir' as action FROM {$this->_prefix} WHERE isdir=1 and local remote=0
+SELECT path, ltime, 'mkdir' as action FROM {$this->_prefix} WHERE isdir=1 and local and remote=0
 UNION
-SELECT path, 'put' as action FROM {$this->_prefix} WHERE isdir=0 and local and (remote=0 or rsize!=lsize or rmd5!=lmd5)
+SELECT path, ltime, 'put' as action FROM {$this->_prefix} WHERE isdir<>1 and local and (remote=0 or rsize<>lsize or rmd5!=lmd5)
+UNION
+SELECT path, ltime, 'time' as action FROM {$this->_prefix} WHERE isdir<>1 and local and remote and rmd5=lmd5 and (rtime is null or rtime<>ltime)
 SQL;
                 $this->_jobSqlResult = $this->_db->query($sql);
                 break;

@@ -10,14 +10,15 @@ class Core_FsObject
     public function  __construct($path, $isDir, $size, $lastModify, $md5=false)
     {
         // $path = str_replace("\\", "/", $path); think this has to be solved in storage driver already
+        $this->isDir = 0;
         if ($isDir) {
             $path = rtrim($path, "/")."/";
+            $this->isDir = 1;
         } elseif ('/'==substr($path, -1) && is_file($path)) {
             Core_Engine::$out->stop("FsObject: file '$path' can't end with /");
         }
 
         $this->path = (string) $path;
-        $this->isDir = (bool) $isDir;
         // convert to UNIX timestamp
         $this->time = is_string($lastModify) ? strtotime($lastModify) : $lastModify;
         $this->size = (float) $size;

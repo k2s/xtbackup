@@ -120,6 +120,7 @@ class Storage_S3 implements Storage_Interface
         }
 
         $job = $this->_out->jobStart("downloading info about files stored in Amazon S3");
+        $this->_out->jobSetProgressStep($job, 100);
 
         // prepare data for loop
         $bucket = $this->getBucket();
@@ -179,7 +180,7 @@ class Storage_S3 implements Storage_Interface
                 $compare->updateFromRemote($fsObject);
 
                 // TODO update progress, needs better clarificatio
-                $this->_out->jobStep( /*1, $count*/);
+                $this->_out->jobStep($job);
             }
             $this->_out->jobEnd($jobFiles, "updated info about one batch of files");
 
@@ -255,6 +256,7 @@ class Storage_S3 implements Storage_Interface
         }
 
         $job = $this->_out->jobStart("updating remote storage");
+        $this->_out->jobSetProgressStep($job, 1000);
         foreach ($compare as $task) {
             try {
                 $path = $this->_getPathWithBasedir($task->path, self::ADD_BASE_DIR);
@@ -262,14 +264,14 @@ class Storage_S3 implements Storage_Interface
                 switch ($task->action)
                 {
                     case "put":
-                        $this->_out->logDebug("updateRemote: Creating " . $path . " in s3 bucket");
+                        $this->_out->logDebug("creating " . $path . " in s3 bucket");
                         $uploadPath = $local->getBaseDir() . $task->path;
                         //fix for windows encoding issue
                         if ($local->isWindows()) {
                             $uploadPath = $local->convertEncodingPath($uploadPath);
                         }
                         if (!file_exists($uploadPath)) {
-                            $this->_out->logError("file $uploadPath does not exists anymore localy");
+                            $this->_out->logError("file $uploadPath does not exists anymore locally");
                             continue;
                         }
                         if (!$simulate) {
@@ -287,20 +289,23 @@ class Storage_S3 implements Storage_Interface
                                 $this->_s3->create_object(
                                     $this->getBucket(), $path,
                                     array(
-                                         'fileUpload' => $uploadPath,
+                                        'fileUpload' => $uploadPath,
+                                        'meta'=> array('mtime'=>$task->ltime),
                                     )
                                 );
                             }
                         }
                         break;
                     case "delete":
-                        $this->_out->logDebug("updateRemote: Deleting " . $path . " from s3 bucket");
+                        $this->_out->logDebug("deleting " . $path . " from s3 bucket");
                         if (!$simulate) {
                             $this->_s3->delete_object(
                                 $this->getBucket(), $path
                             );
                         }
                         break;
+                    default:
+                        $this->_out->logDebug("ignored command {$task->action}");
                 }
             } catch (Exception $e) {
                 throw new Exception($e->getMessage(), $e->getCode());
@@ -310,7 +315,7 @@ class Storage_S3 implements Storage_Interface
                 $compare->remoteHasDone($task);
             }
 
-            $this->_out->jobStep($job, 1000);
+            $this->_out->jobStep($job);
         }
         $this->_out->jobEnd($job, "remote storage updated");
     }

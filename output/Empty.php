@@ -33,21 +33,43 @@ class Output_Empty implements Output_Interface
 
     }
 
-    public function jobStart()
+    /**
+     * Start a new job and return pointer to it
+     *
+     * @param string $msg    message to show
+     * @param array  $params multiple values substituted into $msg (@see vsprintf)
+     *
+     * @return int
+     */
+    public function jobStart($msg, $params=array())
     {
 
     }
 
-    public function jobEnd()
+    /**
+     * Signal job end
+     *
+     * @param int    $job    job id
+     * @param string $msg    message to show
+     * @param array  $params multiple values substituted into $msg (@see vsprintf)
+     *
+     * @return void
+     */
+    public function jobEnd($job, $msg, $params=array())
     {
 
+    }
+
+    public function jobSetProgressStep($job, $step)
+    {
+        $this->_jobs[$job]['step'] = $step;
     }
 
     public function jobPause()
     {
 
     }
-    public function jobStep($step=1)
+    public function jobStep($job)
     {
 
     }

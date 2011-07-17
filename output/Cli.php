@@ -3,14 +3,32 @@ require_once 'output/Empty.php';
 
 class Output_Cli extends Output_Empty
 {
-    protected $_jobId = 0;
-    
-    protected $_startTime = 0;
-
+    /**
+     * Stack of active jobs
+     *
+     * @var array
+     */
+    protected $_jobs = array();
+    /**
+     * ID value of last started job
+     *
+     * @var int
+     */
+    protected $_lastJobId = 0;
+    /**
+     * Level of verbosity
+     *
+     * @var int
+     */
     protected $_verbosity;
 
-    protected $_hadStep = false;
-    
+    protected $_startTime = 0;
+
+    /**
+     * Constructor
+     *
+     * @param array $options configuration options
+     */
     public function  __construct($options)
     {
         // merge options with default options
@@ -18,11 +36,16 @@ class Output_Cli extends Output_Empty
 
         // remember configuration options
         $this->_options = $options;
-        $this->_verbosity = $options['verbosity']; // for faster access
+        $this->_verbosity = $options['verbosity']; // make copy for faster access
 
         // make sure that all output is directly sent to console
         ob_implicit_flush();
     }
+    /**
+     * First output
+     *
+     * @return void
+     */
     public function welcome()
     {
         echo "***********************************\n";
@@ -31,6 +54,11 @@ class Output_Cli extends Output_Empty
         echo "********************************* *\n";
         echo "\n";
     }
+    /**
+     * Last output
+     *
+     * @return void
+     */
     public function finish()
     {
         echo "done.\n";
@@ -90,39 +118,83 @@ class Output_Cli extends Output_Empty
         echo "WARNING: $msg\n";
     }
 
-    public function jobStart()
+    /**
+     * Start a new job and return pointer to it
+     *
+     * @param string $msg    message to show
+     * @param array  $params multiple values substituted into $msg (@see vsprintf)
+     *
+     * @return int
+     */
+    public function jobStart($msg, $params=array())
     {
-        $id = ++$this->_jobId;
     	$params = func_get_args();
+
+        // init new job
+        $job = ++$this->_lastJobId;
+        $this->_jobs[$job] = array('count'=>0, 'step'=>1, 'level'=>count($this->_jobs));
+
     	$msg = array_shift($params);
         if (count($params)>0) {
             $msg = vsprintf($msg, $params);
         }
-        echo "(job $id) start: ".$msg."\n";
+        echo "(job $job) start: ".$msg."\n";
 
-        return $id;
+        return $job;
     }
 
-    public function jobEnd()
+    /**
+     * Signal job end
+     *
+     * @param int    $job    job id
+     * @param string $msg    message to show
+     * @param array  $params multiple values substituted into $msg (@see vsprintf)
+     *
+     * @return void
+     */
+    public function jobEnd($job, $msg, $params=array())
     {
     	$params = func_get_args();
-    	$id = array_shift($params);
+    	$job = array_shift($params);
         $msg = array_shift($params);
 
         if (count($params)>0) {
+            // substitute variables in message
             $msg = vsprintf($msg, $params);
         }
-        if ($this->_hadStep) {
-            $this->_hadStep = false;
+
+        // new line needed if dots were printed out
+        $count = &$this->_jobs[$job]['count'];
+        $step = &$this->_jobs[$job]['step'];
+        if ($count) {
+            if ($count % $step != 0) {
+                // output dot for not completed batch
+                echo ".";
+            }
             echo "\n";
         }
-        echo "(job $id) end: ".$msg."\n";
+
+        // show messsage
+        echo "(job $job) end: ".$msg."\n";
+
+        // remove this job from stack
+        unset($this->_jobs[$job]);
     }
 
-    public function jobStep($job=null, $step=1)
+    public function jobStep($job=null)
     {
-        $this->_hadStep = true;
-        echo ".";
+        $count = &$this->_jobs[$job]['count'];
+        $step = &$this->_jobs[$job]['step'];
+        $count++;
+        if ($count % $step == 0) {
+            // mostly we don't want to show progress on each step
+            echo ".";
+        }
+    }
+
+    public function jobSetProgressStep($job, $step)
+    {
+        $this->_jobs[$job]['step'] = $step;
     }
     
     public function mark()

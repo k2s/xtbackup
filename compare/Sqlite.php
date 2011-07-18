@@ -376,14 +376,18 @@ SQL
                 // TODO on this place there should be SQL using union which will be executed against SQL
                 // and its results will be returned on each Iterator::next()
                 // the $storageType defines if we want to receive changes for local or remote storage
+                $cmdDelete = self::CMD_DELETE;
+                $cmdMkdir = self::CMD_MKDIR;
+                $cmdTs = self::CMD_TS;
+                $cmdPut = self::CMD_PUT;
                 $sql = <<<SQL
-SELECT path, ltime, 'delete' as action FROM {$this->_prefix} WHERE remote and local=0
+SELECT path, ltime, '$cmdDelete' as action FROM {$this->_prefix} WHERE remote and local=0
 UNION
-SELECT path, ltime, 'mkdir' as action FROM {$this->_prefix} WHERE isdir=1 and local and remote=0
+SELECT path, ltime, '$cmdMkdir' as action FROM {$this->_prefix} WHERE isdir=1 and local and remote=0
 UNION
-SELECT path, ltime, 'put' as action FROM {$this->_prefix} WHERE isdir<>1 and local and (remote=0 or rsize<>lsize or rmd5!=lmd5)
+SELECT path, ltime, '$cmdPut' as action FROM {$this->_prefix} WHERE isdir<>1 and local and (remote=0 or rsize<>lsize or rmd5!=lmd5)
 UNION
-SELECT path, ltime, 'time' as action FROM {$this->_prefix} WHERE isdir<>1 and local and remote and rmd5=lmd5 and (rtime is null or rtime<>ltime)
+SELECT path, ltime, '$cmdTs' as action FROM {$this->_prefix} WHERE isdir<>1 and local and remote and rmd5=lmd5 and (rtime is null or rtime<>ltime)
 SQL;
                 $this->_jobSqlResult = $this->_db->query($sql);
                 break;
@@ -418,14 +422,24 @@ SQL;
     {
         switch ($task->action)
         {
-            case "put":
+            case self::CMD_PUT:
                 $this->_prepRemoteHasUploaded->bindValue(":path", $task->path);
                 $this->_prepRemoteHasUploaded->execute();
                 break;
-            case "delete":
+            case self::CMD_DELETE:
                 $this->_prepRemoteHasDeleted->bindValue(":path", $task->path);
                 $this->_prepRemoteHasDeleted->execute();
                 break;
+            case self::CMD_MKDIR:
+                $this->_prepRemoteHasUploaded->bindValue(":path", $task->path);
+                $this->_prepRemoteHasUploaded->execute();
+                break;
+            case self::CMD_TS:
+                $this->_prepRemoteHasUploaded->bindValue(":path", $task->path);
+                $this->_prepRemoteHasUploaded->execute();
+                break;
+            default:
+                $this->_out->logError("ignored command {$task->action}");
         }
     }
 

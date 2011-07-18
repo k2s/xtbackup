@@ -251,7 +251,11 @@ class Storage_Filesystem implements Storage_Interface
     
     public function convertEncodingPath($path)
     {
-        return mb_convert_encoding($path, $this->_options['windows']['encoding'], "auto");
+        if ($this->_isWindows) {
+            return mb_convert_encoding($path, $this->_options['windows']['encoding'], "auto");
+        } else {
+            return $path;
+        }
     }
 
     static public function getConfigOptions($part=null)

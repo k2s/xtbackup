@@ -166,12 +166,12 @@ class Storage_S3 implements Storage_Interface
             if (!$response->areOK()) {
                 $this->_out->stop("S3 response problem, meta data not returned");
             }
-            if (count($response)!=$count) {
+            if (count($response) != $count) {
                 $this->_out->stop("S3 response problem, meta data not returned for all files");
             }
 
             // process received information
-            $metaId=0;
+            $metaId = 0;
             foreach ($list->body->Contents as $v) {
                 // save object
                 $meta = $response[$metaId++];
@@ -204,11 +204,11 @@ class Storage_S3 implements Storage_Interface
     {
         $path = (string)$v->Key;
 
-        $mtime = isset($meta->header['x-amz-meta-mtime']) ? $meta->header['x-amz-meta-mtime'] : null;
+        $localTs = isset($meta->header['x-amz-meta-localts']) ? $meta->header['x-amz-meta-localts'] : null;
 
         // $path ends with '/' or $path ends with '_$folder$'
         $isDir = ('/' == substr($path, -1)) || ('_$folder$' == substr($path, 9));
-        $obj = new Core_FsObject($path, $isDir, (float)$v->Size, $mtime, str_replace('"', '', (string)$v->ETag));
+        $obj = new Core_FsObject($path, $isDir, (float)$v->Size, $localTs, str_replace('"', '', (string)$v->ETag));
 
         return $obj;
     }
@@ -263,13 +263,25 @@ class Storage_S3 implements Storage_Interface
 
                 switch ($task->action)
                 {
-                    case "put":
-                        $this->_out->logDebug("creating " . $path . " in s3 bucket");
-                        $uploadPath = $local->getBaseDir() . $task->path;
-                        //fix for windows encoding issue
-                        if ($local->isWindows()) {
-                            $uploadPath = $local->convertEncodingPath($uploadPath);
+                    case Compare_Interface::CMD_MKDIR:
+                        $this->_out->logDebug("mkdir " . $path . " in s3 bucket");
+                        if (!$simulate) {
+                            // create folders
+                            $this->_s3->create_object(
+                                $this->getBucket(), $path,
+                                array(
+                                     'body' => '',
+                                )
+                            );
                         }
+                        break;
+                    case Compare_Interface::CMD_PUT:
+                        $this->_out->logDebug("put " . $path . " in s3 bucket");
+                        $uploadPath = $local->getBaseDir() . $task->path;
+
+                        //fix for windows encoding issue
+                        $uploadPath = $local->convertEncodingPath($uploadPath);
+
                         if (!file_exists($uploadPath)) {
                             $this->_out->logError("file $uploadPath does not exists anymore locally");
                             continue;
@@ -278,25 +290,25 @@ class Storage_S3 implements Storage_Interface
                             //empty directory
                             if (ord(substr($path, -1)) === 47) {
                                 //for empty folders we need little different options
+                                $this->_out->logWarning("TODO putting empty folder $path ... is it possible ?");
                                 $this->_s3->create_object(
                                     $this->getBucket(), $path,
                                     array(
-                                         'body' => /*file_get_contents($local->getBaseDir().$task->path)*/
-                                         '',
+                                         'body' => '',
                                     )
                                 );
                             } else {
                                 $this->_s3->create_object(
                                     $this->getBucket(), $path,
                                     array(
-                                        'fileUpload' => $uploadPath,
-                                        'meta'=> array('mtime'=>$task->ltime),
+                                         'fileUpload' => $uploadPath,
+                                         'meta' => array('localts' => $task->ltime),
                                     )
                                 );
                             }
                         }
                         break;
-                    case "delete":
+                    case Compare_Interface::CMD_DELETE:
                         $this->_out->logDebug("deleting " . $path . " from s3 bucket");
                         if (!$simulate) {
                             $this->_s3->delete_object(
@@ -304,8 +316,20 @@ class Storage_S3 implements Storage_Interface
                             );
                         }
                         break;
+                    case Compare_Interface::CMD_TS:
+                        $this->_out->logDebug("remember local timestamp for " . $path . " in s3 bucket");
+                        if (!$simulate) {
+                            $this->_s3->update_object(
+                                $this->getBucket(), $path,
+                                array(
+                                     'meta' => array('localts' => $task->ltime),
+                                )
+                            );
+                        }
+                        break;
                     default:
-                        $this->_out->logDebug("ignored command {$task->action}");
+                        $this->_out->logError("ignored command {$task->action}");
+
                 }
             } catch (Exception $e) {
                 throw new Exception($e->getMessage(), $e->getCode());
@@ -380,7 +404,7 @@ TXT
     public function getMd5($path)
     {
         $v = $this->_s3->get_object_headers($this->getBucket(), $path);
-        $md5 = str_replace('"', '', (string) $v->header['etag']);
+        $md5 = str_replace('"', '', (string)$v->header['etag']);
         return $md5;
     }
 /*

@@ -1,6 +1,11 @@
 <?php
 interface Compare_Interface
 {
+    const CMD_MKDIR = "mkdir";
+    const CMD_PUT = "put";
+    const CMD_DELETE = "delete";
+    const CMD_TS = "ts";
+
     static function getConfigOptions($part=null);
     /**
      * Compare content of local and remote storages

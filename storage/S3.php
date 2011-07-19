@@ -25,6 +25,10 @@ class Storage_S3 implements Storage_Interface
      * @var array
      */
     protected $_options;
+    /** @var bool */
+    protected $_asRemote;
+    /** @var array */
+    protected $_drivers;
     /**
      * We need adjusted basedir not the original one form configuration
      *
@@ -33,11 +37,12 @@ class Storage_S3 implements Storage_Interface
     protected $_baseDir = null;
 
     /**
+     * @param Core_Engine  $engine
+     * @param Output_Stack $output
+     * @param array        $options
      *
-     * @var boolean
+     * @return \Storage_S3
      */
-    //protected $_testing = false;
-
     public function  __construct($engine, $output, $options)
     {
         // merge options with default options
@@ -55,7 +60,6 @@ class Storage_S3 implements Storage_Interface
         $this->_out = $output;
         $this->_options = $options;
         $this->_engine = $engine;
-        //$this->_testing = $this->_options['testing']; // for faster access
     }
 
     public function init($myrole, $drivers)
@@ -68,7 +72,7 @@ class Storage_S3 implements Storage_Interface
 
         if ($this->_options['compatibilityTest']) {
             // see lib/AWSSDKforPHP/_compatibility_test
-            $job = $this->_out->jobStart("executing Amazon SDK compatibility test");
+            $this->_out->jobStart("executing Amazon SDK compatibility test");
             include "lib/AWSSDKforPHP/_compatibility_test/sdk_compatibility_test_cli.php";
             $this->_out->stop("-- re-run without --");
         }
@@ -127,6 +131,7 @@ class Storage_S3 implements Storage_Interface
         $baseDir = $this->getBaseDir();
         $marker = '';
         $itemCount = 0;
+        $v = false;
 
         // let compare driver know that we are starting
         $compare->updateFromRemoteStart();
@@ -160,8 +165,10 @@ class Storage_S3 implements Storage_Interface
             // download meta data
             $batch = new CFBatchRequest(3);
             foreach ($list->body->Contents as $v) {
+                /** @noinspection PhpUndefinedMethodInspection */
                 $this->_s3->batch($batch)->get_object_headers($bucket, $v->Key); // Get content-type
             }
+            /** @var $response CFArray */
             $response = $this->_s3->batch($batch)->send();
             if (!$response->areOK()) {
                 $this->_out->stop("S3 response problem, meta data not returned");
@@ -173,6 +180,7 @@ class Storage_S3 implements Storage_Interface
             // process received information
             $metaId = 0;
             foreach ($list->body->Contents as $v) {
+                /** @var $v CFResponse */
                 // save object
                 $meta = $response[$metaId++];
                 $fsObject = $this->_createFsObject($v, $meta);
@@ -204,7 +212,7 @@ class Storage_S3 implements Storage_Interface
      */
     public function _createFsObject($v, $meta)
     {
-        $path = (string)$v->Key;
+        $path = (string) $v->Key;
 
         $localTs = isset($meta->header['x-amz-meta-localts']) ? $meta->header['x-amz-meta-localts'] : null;
 
@@ -250,7 +258,9 @@ class Storage_S3 implements Storage_Interface
             $simulate = false;
         }
 
+        /** @var $compare Compare_Interface */
         $compare = $drivers['compare'];
+        /** @var $local Storage_Interface */
         $local = $drivers['local'];
 
         if (!$compare->initChangesOn("remote")) {

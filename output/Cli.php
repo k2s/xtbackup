@@ -4,12 +4,6 @@ require_once 'output/Empty.php';
 class Output_Cli extends Output_Empty
 {
     /**
-     * Stack of active jobs
-     *
-     * @var array
-     */
-    protected $_jobs = array();
-    /**
      * ID value of last started job
      *
      * @var int

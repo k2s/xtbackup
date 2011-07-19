@@ -11,4 +11,5 @@ interface Storage_Interface {
     function getBaseDir();
     function getMd5($path);
     static function getConfigOptions($part=null);
+    function convertEncodingPath($path);
 }

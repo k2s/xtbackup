@@ -25,4 +25,9 @@ interface Compare_Interface
     function initChangesOn($storageType);
 
     function wasAlreadyUpdatedFrom($role);
+
+    function updateFromLocalStart();
+    function updateFromLocalEnd();
+    function updateFromLocal($fsObject);
+    function remoteHasDone($task);
 }

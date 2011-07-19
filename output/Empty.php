@@ -6,6 +6,13 @@ class Output_Empty implements Output_Interface
 {
     protected $_options = array();
 
+    /**
+     * Stack of active jobs
+     *
+     * @var array
+     */
+    protected $_jobs = array();
+
     public function  __construct($options)
     {
         $this->_options = $options;

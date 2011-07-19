@@ -33,8 +33,9 @@ class Filter_RegExp implements Filter_Interface
         }
     }
     /**
+     * Set iterator
      *
-     * @param string|RecursiveDirectoryIterator instance $directory 
+     * @param string|RecursiveDirectoryIterator $directory instance $directory
      * 
      * @return void
      */

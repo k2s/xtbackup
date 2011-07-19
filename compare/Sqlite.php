@@ -35,27 +35,35 @@ class Compare_Sqlite implements Compare_Interface, Iterator
      * @var string
      */
     protected $_prefix;
-
-    /**
-     *
-     * @var type
-     */
+    /** @var int */
     protected $_jobPosition = 0;
-
     /**
      * @var SQLite3Result
      */
     protected $_jobSqlResult;
+    /** @var array */
     protected $_job;
 
-    /**
-     * @var SQLite3Stmt
-     */
+    /** @var SQLite3Stmt */
     protected $_prepRemoteHasDeleted;
-    /**
-     * @var SQLite3Stmt
-     */
+    /** @var SQLite3Stmt */
     protected $_prepRemoteHasUploaded;
+    /** @var SQLite3Stmt */
+    protected $_prepFromLocal1;
+    /** @var SQLite3Stmt */
+    protected $_prepFromLocal2;
+    /** @var SQLite3Stmt */
+    protected $_prepFromLocalFull1;
+    /** @var SQLite3Stmt */
+    protected $_prepFromLocalFull2;
+    /** @var SQLite3Stmt */
+    protected $_prepFromRemote2;
+    /** @var SQLite3Stmt */
+    protected $_prepFromRemote1;
+    /** @var SQLite3Stmt */
+    protected $_prepFromLocalMd5;
+    /** @var SQLite3Stmt */
+    protected $_prepFromRemoteMd5;
 
     /**
      * @param Core_Engine $engine
@@ -227,8 +235,11 @@ class Compare_Sqlite implements Compare_Interface, Iterator
     }
 
     /**
+     * Update compare database with data from remote storage
      *
-     * @param Core_FsObject $object file system object
+     * @param $fsObject
+     *
+     * @return void
      */
     public function updateFromRemote($fsObject)
     {
@@ -263,8 +274,11 @@ class Compare_Sqlite implements Compare_Interface, Iterator
     }
 
     /**
+     * Update compare database with data from local storage
      *
-     * @param Core_FsObject $object file system object
+     * @param Core_FsObject $fsObject file system object
+     *
+     * @return void
      */
     public function updateFromLocal($fsObject)
     {
@@ -310,6 +324,7 @@ class Compare_Sqlite implements Compare_Interface, Iterator
 SELECT path FROM {$this->_prefix} WHERE local and remote and rmd5 is null and (rtime<>ltime or rtime is null)
 SQL
         ));
+        /** @var $driver Storage_Interface */
         $driver = $drivers['remote'];
         $counter = 0;
         $job = $this->_out->jobStart("we need to calculate md5 for files");
@@ -451,7 +466,6 @@ SQL;
         } else {
             return false;
         }
-        ;
     }
 
     //only for testing

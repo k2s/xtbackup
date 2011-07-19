@@ -9,6 +9,14 @@
  * @method logWarning()
  * @method logError()
  * @method logCritical()
+ * @method finish()
+ * @method welcome()
+ * @method mark()
+ * @method time()
+ * @method jobStart()
+ * @method jobEnd()
+ * @method jobStep()
+ * @method jobSetProgressStep()
  */
 class Output_Stack
 {

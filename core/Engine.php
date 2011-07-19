@@ -55,7 +55,7 @@ class Core_Engine
      * @param array $cmdArguments
      * @param Output_Interface $output default logging object, if not defined Output_Cli will be used
      *
-     * @return void
+     * @return \Core_Engine
      */
     public function __construct($cmdArguments=array(), $output=null)
     {

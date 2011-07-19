@@ -7,12 +7,18 @@
 interface Filter_Interface
 {
     /**
+     * Apply filters
+     *
      * @return mixed anything that can be iterated
      */
     public function applyFilters();
     
     /**
-     * @param RecursiveDirectoryIterator instance
+     * Set iterator
+     *
+     * @param RecursiveDirectoryIterator $iterator instance
+     *
+     * @return void
      */
     public function setIterator($iterator);
 }

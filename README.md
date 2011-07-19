@@ -44,8 +44,8 @@ Resources
   * <http://daringfireball.net/projects/markdown/dingus>
   * <http://github.github.com/github-flavored-markdown>
 
-Authors
--------
+Contributors
+------------
 
 * work donated by [xtmotion.com](http://www.xtmotion.com)
 * Martin Minka

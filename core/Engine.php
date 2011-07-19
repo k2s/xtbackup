@@ -125,7 +125,7 @@ class Core_Engine
     protected function _loadConfigFiles()
     {
         if (!isset($this->_optionsCmd['ini'])) {
-            return array();
+            return ;
         }
 
         foreach ($this->_optionsCmd['ini'] as $fileName) {
@@ -184,6 +184,8 @@ class Core_Engine
      * unique
      *
      * calling: result = array_merge_recursive_distinct(a1, a2, ... aN)
+     *
+     * @return array
      **/
     public static function array_merge_recursive_distinct()
     {

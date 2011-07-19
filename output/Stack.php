@@ -4,11 +4,11 @@
  *
  * Internally it uses output drivers to process requests.
  *
- * @method void logDebug()
- * @method void logNotice()
- * @method void logWarning()
- * @method void logError()
- * @method void logCritical()
+ * @method logDebug()
+ * @method logNotice()
+ * @method logWarning()
+ * @method logError()
+ * @method logCritical()
  */
 class Output_Stack
 {

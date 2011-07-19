@@ -158,7 +158,7 @@ class Storage_S3 implements Storage_Interface
             $jobFiles = $this->_out->jobStart("processing information about $count remote files");
 
             // download meta data
-            $batch = new CFBatchRequest(10);
+            $batch = new CFBatchRequest(3);
             foreach ($list->body->Contents as $v) {
                 $this->_s3->batch($batch)->get_object_headers($bucket, $v->Key); // Get content-type
             }
@@ -199,6 +199,8 @@ class Storage_S3 implements Storage_Interface
      *
      * @param CFResponse $v
      * @param CFResponse $meta
+     *
+     * @return Core_FsObject
      */
     public function _createFsObject($v, $meta)
     {

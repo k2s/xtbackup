@@ -461,7 +461,7 @@ SQL;
             "CREATE TABLE IF NOT EXISTS PathTest " .
             "(path TEXT)"
         );
-        $this->_out->logDebug("<<<VAUE must be inserted {$value}");
+        $this->_out->logDebug(">>>VALUE must be inserted {$value}");
 
         $this->_exec("INSERT INTO PathTest VALUES (\"{$value}\")");
 

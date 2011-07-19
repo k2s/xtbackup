@@ -18,6 +18,9 @@ Installation
 ------------
 
 * get code from <http://github.com/k2s/xtbackup>
+  * git clone git://github.com/k2s/xtbackup.git
+  * cd xtbackup
+  * git submodule update --init
 * copy examples/minimal.ini and examples/s3access.ini to own folder
 * modify this files (see Configuration section)
 * dry run with : `php -f xtbackup.php ini[]=/path_to/s3access.ini ini[]=/path_to/minimal.ini`

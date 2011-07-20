@@ -163,27 +163,27 @@ class Storage_S3 implements Storage_Interface
             $jobFiles = $this->_out->jobStart("processing information about $count remote files");
 
             // download meta data
-            $batch = new CFBatchRequest(3);
-            foreach ($list->body->Contents as $v) {
-                /** @noinspection PhpUndefinedMethodInspection */
-                $this->_s3->batch($batch)->get_object_headers($bucket, $v->Key); // Get content-type
-            }
-            /** @var $response CFArray */
-            $response = $this->_s3->batch($batch)->send();
-            if (!$response->areOK()) {
-                $this->_out->stop("S3 response problem, meta data not returned");
-            }
-            if (count($response) != $count) {
-                $this->_out->stop("S3 response problem, meta data not returned for all files");
-            }
+//            $batch = new CFBatchRequest(3);
+//            foreach ($list->body->Contents as $v) {
+//                /** @noinspection PhpUndefinedMethodInspection */
+//                $this->_s3->batch($batch)->get_object_headers($bucket, $v->Key); // Get content-type
+//        }
+//            /** @var $response CFArray */
+//            $response = $this->_s3->batch($batch)->send();
+//            if (!$response->areOK()) {
+//                $this->_out->stop("S3 response problem, meta data not returned");
+//            }
+//            if (count($response) != $count) {
+//                $this->_out->stop("S3 response problem, meta data not returned for all files");
+//            }
 
             // process received information
             $metaId = 0;
             foreach ($list->body->Contents as $v) {
                 /** @var $v CFResponse */
                 // save object
-                $meta = $response[$metaId++];
-                $fsObject = $this->_createFsObject($v, $meta);
+//                $meta = $response[$metaId++];
+                $fsObject = $this->_createFsObject($v, /*$meta*/array());
                 $fsObject->path = $this->_getPathWithBasedir($fsObject->path);
                 $compare->updateFromRemote($fsObject);
 
@@ -195,7 +195,7 @@ class Storage_S3 implements Storage_Interface
             // move to next batch of files
             $marker = $v->Key;
             $firstBatch = false;
-        } while ((string)$list->body->IsTruncated == 'true');
+        } while ((string) $list->body->IsTruncated == 'true');
 
         // let compare driver know that we are done
         $compare->updateFromRemoteEnd();
@@ -214,11 +214,10 @@ class Storage_S3 implements Storage_Interface
     {
         $path = (string) $v->Key;
 
-        $localTs = isset($meta->header['x-amz-meta-localts']) ? $meta->header['x-amz-meta-localts'] : null;
-
         // $path ends with '/' or $path ends with '_$folder$'
         $isDir = ('/' == substr($path, -1)) || ('_$folder$' == substr($path, 9));
-        $obj = new Core_FsObject($path, $isDir, (float)$v->Size, $localTs, str_replace('"', '', (string)$v->ETag));
+        $obj = new Core_FsObject($path, $isDir, (float)$v->Size, (string) $v->LastModified, str_replace('"', '', (string)$v->ETag));
+        //$obj->setLastSyncWithLocal(isset($meta->header['x-amz-meta-localts']) ? $meta->header['x-amz-meta-localts'] : null);
 
         return $obj;
     }
@@ -329,15 +328,16 @@ class Storage_S3 implements Storage_Interface
                         }
                         break;
                     case Compare_Interface::CMD_TS:
-                        $this->_out->logDebug("remember local timestamp for " . $path . " in s3 bucket");
-                        if (!$simulate) {
-                            $this->_s3->update_object(
-                                $this->getBucket(), $path,
-                                array(
-                                     'meta' => array('localts' => $task->ltime),
-                                )
-                            );
-                        }
+                        // storing this information as metadata is too slow to be used
+//                        $this->_out->logDebug("remember local timestamp for " . $path . " in s3 bucket");
+//                        if (!$simulate) {
+//                            $this->_s3->update_object(
+//                                $this->getBucket(), $path,
+//                                array(
+//                                     'meta' => array('localts' => $task->ltime),
+//                                )
+//                            );
+//                        }
                         break;
                     default:
                         $this->_out->logError("ignored command {$task->action}");
@@ -418,6 +418,11 @@ TXT
         $v = $this->_s3->get_object_headers($this->getBucket(), $path);
         $md5 = str_replace('"', '', (string)$v->header['etag']);
         return $md5;
+    }
+
+    public function convertEncodingPath($path)
+    {
+        return $path;
     }
 /*
     function refreshLocal($myrole, $drivers)

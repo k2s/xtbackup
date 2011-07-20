@@ -143,7 +143,7 @@ class Compare_Sqlite implements Compare_Interface, Iterator
                                                                "DELETE FROM {$this->_prefix} WHERE path=:path", "prepare SQL: "
                                                            ));
         $this->_prepRemoteHasUploaded = $this->_db->prepare($this->_sql(
-                                                                "UPDATE {$this->_prefix} SET remote=1, rmd5=lmd5, rsize=lsize, rtime=ltime WHERE path=:path", "prepare SQL: "
+                                                                "UPDATE {$this->_prefix} SET remote=1, rmd5=lmd5, rsize=lsize, rts=ltime WHERE path=:path", "prepare SQL: "
                                                             ));
     }
 
@@ -193,7 +193,7 @@ class Compare_Sqlite implements Compare_Interface, Iterator
         }
         $this->_exec(
             "CREATE TABLE IF NOT EXISTS {$this->_prefix} " .
-            "(path TEXT, isdir INTEGER, local INTEGER NOT NULL DEFAULT 0, remote INTEGER NOT NULL DEFAULT 0, lmd5 TEXT, rmd5 TEXT, ltime INTEGER, rtime INTEGER, lsize, rsize, PRIMARY KEY(path ASC))"
+            "(path TEXT, isdir INTEGER, local INTEGER NOT NULL DEFAULT 0, remote INTEGER NOT NULL DEFAULT 0, lmd5 TEXT, rmd5 TEXT, ltime INTEGER, rtime INTEGER, rts INTEGER, lsize, rsize, PRIMARY KEY(path ASC))"
         );
     }
 
@@ -321,7 +321,7 @@ class Compare_Sqlite implements Compare_Interface, Iterator
         // update missing md5 for remote files where needed
         $this->_out->logNotice(">>>starting update md5 of remote files ...");
         $stmt = $this->_db->query($this->_sql(<<<SQL
-SELECT path FROM {$this->_prefix} WHERE local and remote and rmd5 is null and (rtime<>ltime or rtime is null)
+SELECT path FROM {$this->_prefix} WHERE isdir=0 and local and remote and rmd5 is null and (rts<>ltime or rts is null)
 SQL
         ));
         /** @var $driver Storage_Interface */
@@ -350,7 +350,7 @@ SQL
         // update missing md5 for local files where needed
         $this->_out->logNotice(">>>starting update md5 of local files ...");
         $stmt = $this->_db->query($this->_sql(<<<SQL
-SELECT path FROM {$this->_prefix} WHERE local and remote and (rtime<>ltime or rtime is null)
+SELECT path FROM {$this->_prefix} WHERE isdir=0 and local and remote and (rts<>ltime or rts is null)
 SQL
         ));
 
@@ -402,7 +402,7 @@ SELECT path, ltime, '$cmdMkdir' as action FROM {$this->_prefix} WHERE isdir=1 an
 UNION
 SELECT path, ltime, '$cmdPut' as action FROM {$this->_prefix} WHERE isdir<>1 and local and (remote=0 or rsize<>lsize or rmd5!=lmd5)
 UNION
-SELECT path, ltime, '$cmdTs' as action FROM {$this->_prefix} WHERE isdir<>1 and local and remote and rmd5=lmd5 and (rtime is null or rtime<>ltime)
+SELECT path, ltime, '$cmdTs' as action FROM {$this->_prefix} WHERE isdir<>1 and local and remote and rmd5=lmd5 and (rts is null or rts<>ltime)
 SQL;
                 $this->_jobSqlResult = $this->_db->query($sql);
                 break;

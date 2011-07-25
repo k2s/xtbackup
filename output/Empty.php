@@ -26,7 +26,7 @@ class Output_Empty implements Output_Interface
     {
 
     }
-    public function finish()
+    public function finish($returnEx)
     {
 
     }

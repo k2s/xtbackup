@@ -14,4 +14,4 @@ require_once 'core/Engine.php';
 $engine = new Core_Engine($argv);
 $engine->init();
 $engine->run();
-$engine->finish();
+exit($engine->finish());

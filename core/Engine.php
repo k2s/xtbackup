@@ -1,6 +1,53 @@
 <?php
 require_once "core/CfgPart.php";
 
+class Core_StopException extends Exception
+{
+    const RETCODE_OK = 0;
+    const RETCODE_FOREIGN_EXCEPTION = 1;
+    const RETCODE_EXCEPTION = 2;
+
+    /**
+     * @var string
+     */
+    protected $_stopAt;
+    /**
+     * @var int
+     */
+    protected $_retCode;
+    /**
+     * @var bool|Exception
+     */
+    protected $_foreignException=false;
+
+    public function __construct ($message, $stopAt, $previous=null, $retCode=self::RETCODE_EXCEPTION)
+    {
+        $this->_stopAt = $stopAt;
+        $this->_retCode = $retCode;
+        parent::__construct($message, 0, $previous);
+    }
+
+    public function setException($e)
+    {
+        $this->_foreignException = $e;
+    }
+
+    public function getException()
+    {
+        return false===$this->_foreignException ? $this : $this->_foreignException;
+    }
+
+    public function getStopAt()
+    {
+        return $this->_stopAt;
+    }
+
+    public function getReturnCode()
+    {
+        return $this->_retCode;
+    }
+}
+
 class Core_Engine
 {
     const ROLE_REMOTE = "remote";
@@ -48,6 +95,14 @@ class Core_Engine
     protected $_uniqueKey = false;
 
     /**
+     * Signals that execution stopped at some point ff different from FALSE
+     * False if no problem.
+     *
+     * @var Core_StopException
+     */
+    protected $_stopAt = false;
+
+    /**
      * Constructor
      *
      * The $output object is used already before INI is loaded so it is important object to see errors in configuration.
@@ -83,7 +138,12 @@ class Core_Engine
 
     public function finish()
     {
-        self::$out->finish();
+        self::$out->finish($this->_stopAt);
+        if (false===$this->_stopAt) {
+            return Core_StopException::RETCODE_OK;
+        } else {
+            return $this->_stopAt->getReturnCode();
+        }
     }
 
     public function loadIni($fileName, $onlyReturn=false)
@@ -282,6 +342,9 @@ class Core_Engine
 
     protected function _configureLocalStorage()
     {
+        if (!isset($this->_options['engine']['local'])) {
+            throw new Core_StopException("You have to configure `engine.compare`.", "configureLocalStorage");
+        }
         $key = $this->_options['engine']['local'];
         self::$out->logDebug("local storage will be configured based on key '$key'");
         $this->_roles[self::ROLE_LOCAL] = $this->_getStorage($key);
@@ -289,6 +352,9 @@ class Core_Engine
     
     protected function _configureRemoteStorage()
     {
+        if (!isset($this->_options['engine']['remote'])) {
+            throw new Core_StopException("You have to configure `engine.remote`.", "configureRemoteStorage");
+        }
         $key = $this->_options['engine']['remote'];
         self::$out->logDebug("remote storage will be configured based on key '$key'");
         $this->_roles[self::ROLE_REMOTE] = $this->_getStorage($key);
@@ -296,6 +362,9 @@ class Core_Engine
 
     protected function _configureCompare()
     {
+        if (!isset($this->_options['engine']['compare'])) {
+            throw new Core_StopException("You have to configure `engine.compare`.", "configureCompare");
+        }
         $key = $this->_options['engine']['compare'];
         self::$out->logDebug("compare driver will be configured based on key '$key'");
         $this->_roles[self::ROLE_COMPARE] = $this->_getCompare($key);
@@ -306,17 +375,39 @@ class Core_Engine
         // prepare final options
         $this->_options = self::array_merge_recursive_distinct($this->_getDefaultOptions(), $this->_optionsIni, $this->_optionsCmd);
 
-        // configure output
-        $this->_configureOutput();
+        try {
+            if (!isset($this->_options['engine'])) {
+                throw new Core_StopException("You have to configure `engine`.", "init");
+            }
 
-        // configure compare driver
-        $this->_configureCompare();
+            // configure output
+            $this->_configureOutput();
 
-        // configure local driver
-        $this->_configureLocalStorage();
+            // configure compare driver
+            $this->_configureCompare();
 
-        // configure remote driver
-        $this->_configureRemoteStorage();
+            // configure local driver
+            $this->_configureLocalStorage();
+
+            // configure remote driver
+            $this->_configureRemoteStorage();
+        } catch (Core_StopException $e) {
+            // start text
+            self::$out->welcome();
+            // error message
+            $this->_stopAt = $e;
+            self::$out->logError($e->getMessage());
+            // help instructions
+            self::$out->showHelp("Use command line parameter --help to see usage instructions.");
+            return false;
+        } catch (Exception $e) {
+            $myE = new Core_StopException("", "engine init", null, Core_StopException::FOREIGN_EXCEPTION);
+            $myE->setException($e);
+            $this->_stopAt = $myE;
+            throw $e;
+        }
+
+        return true;
     }
 
     protected function _initAutoload()
@@ -362,6 +453,10 @@ class Core_Engine
 
     public function run()
     {
+        if ($this->_stopAt!==false) {
+            return false;
+        }
+
         $orders = $this->_roles;
 
         $this->_runPhase("init", $orders)
@@ -370,5 +465,7 @@ class Core_Engine
             && $this->_runPhase("compare", $orders)
             && $this->_runPhase("updateRemote", $orders)
             && $this->_runPhase("shutdown", $orders);
+
+        return true;
     }
 }

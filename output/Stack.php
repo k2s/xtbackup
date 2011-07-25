@@ -9,8 +9,8 @@
  * @method logWarning()
  * @method logError()
  * @method logCritical()
- * @method finish()
- * @method welcome()
+ * @method finish($returnEx)
+ * @method showHelp()
  * @method mark()
  * @method time()
  * @method jobStart()
@@ -26,7 +26,14 @@ class Output_Stack
     const NOTICE   = 5;  // Notice: normal but significant condition
     const DEBUG    = 7;  // Debug: debug messages
 
+    /**
+     * Array of output objects to be used to process output
+     *
+     * @var array
+     */
     protected $_stack = array();
+
+    protected $_welcomeOnce = false;
 
     public function outputAdd($output)
     {
@@ -50,7 +57,6 @@ class Output_Stack
             $ret = call_user_func_array(array($output, $name), $params);
         }
 
-
         return $ret;
     }
 
@@ -63,6 +69,14 @@ class Output_Stack
     {
         $this->logCritical(func_get_arg(0));
         die;
+    }
+
+    public function welcome()
+    {
+        if (!$this->_welcomeOnce) {
+            $this->__call("welcome", array());
+            $this->_welcomeOnce = true;
+        }
     }
 
 

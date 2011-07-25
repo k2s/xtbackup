@@ -51,11 +51,24 @@ class Output_Cli extends Output_Empty
     /**
      * Last output
      *
+     * @param $returnEx Core_StopException|bool
+     *
      * @return void
      */
-    public function finish()
+    public function finish($returnEx)
     {
-        echo "done.\n";
+        if (false===$returnEx) {
+            echo "done.\n";
+        } else {
+            echo "error.\n";
+        }
+    }
+
+    public function showHelp($hint=false)
+    {
+        if ($hint) {
+            echo "\n$hint\n\n";
+        }
     }
 
     public function logDebug()

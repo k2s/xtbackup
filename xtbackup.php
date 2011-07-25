@@ -11,7 +11,14 @@ set_include_path(realpath(dirname(__FILE__)));
 
 require_once 'core/Engine.php';
 
+$helpIdx = array_search("--help", $argv);
+if (false!==$helpIdx) {
+    echo "TODO some help text for this command line application\n";
+    exit(Core_StopException::RETCODE_OK);
+}
+
 $engine = new Core_Engine($argv);
+$engine->setAppHelpMessage("Use command line parameter --help to see usage instructions.");
 $engine->init();
 $engine->run();
 exit($engine->finish());

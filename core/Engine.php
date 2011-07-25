@@ -79,6 +79,13 @@ class Core_Engine
      * @var array
      */
     protected $_options = false;
+    /**
+     * Help message configurable from main application
+     * @see setAppHelpMessage
+     *
+     * @var string
+     */
+    protected $_appHelpMessage = false;
 
     /**
      * Reference to drivers with different roles
@@ -398,7 +405,7 @@ class Core_Engine
             $this->_stopAt = $e;
             self::$out->logError($e->getMessage());
             // help instructions
-            self::$out->showHelp("Use command line parameter --help to see usage instructions.");
+            self::$out->showHelp($this->_appHelpMessage);
             return false;
         } catch (Exception $e) {
             $myE = new Core_StopException("", "engine init", null, Core_StopException::FOREIGN_EXCEPTION);
@@ -408,6 +415,11 @@ class Core_Engine
         }
 
         return true;
+    }
+
+    public function setAppHelpMessage($helpMessage)
+    {
+        $this->_appHelpMessage = $helpMessage;
     }
 
     protected function _initAutoload()

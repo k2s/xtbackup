@@ -3,7 +3,8 @@ xtBackup
 
 Development of this project was sponsored by [xtmotion.com](http://www.xtmotion.com).
 
-**!!! THIS PROJECT IS IN ALPHA STATE !!!**
+**!!! THIS PROJECT IS IN BETA STAGE !!!**
+
 You should use it only for testing purposes and not in production.
 The Authors will not be responsible for any damage users may suffer, including but not limited to, loss of data.
 
@@ -12,7 +13,7 @@ Requirements
 
 * PHP5
   * with SQLite support
-* current implementation of the PHP-AWS library doesn't support files over 4GB on 32bit architecture
+* current implementation of the PHP-AWS library doesn't support files over 2GB on 32bit architecture
 
 Installation
 ------------

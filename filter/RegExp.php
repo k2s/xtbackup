@@ -60,4 +60,9 @@ class Filter_RegExp implements Filter_Interface
         
         return $this->_iterator;
     }
+
+    static public function getConfigOptions($part = null)
+    {
+        // TODO: Implement getConfigOptions() method.
+    }
 }

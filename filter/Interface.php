@@ -21,4 +21,6 @@ interface Filter_Interface
      * @return void
      */
     public function setIterator($iterator);
+
+    static public function getConfigOptions($part=null);
 }

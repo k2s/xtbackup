@@ -1,6 +1,9 @@
 <?php
 require_once "core/CfgPart.php";
 
+// may be used in INI
+!defined('ENGINE_DIR') && define("ENGINE_DIR", realpath(__DIR__.'/../').'/');
+
 class Core_StopException extends Exception
 {
     const RETCODE_OK = 0;
@@ -20,7 +23,7 @@ class Core_StopException extends Exception
      */
     protected $_foreignException=false;
 
-    public function __construct ($message, $stopAt, $previous=null, $retCode=self::RETCODE_EXCEPTION)
+    public function __construct($message, $stopAt, $previous=null, $retCode=self::RETCODE_EXCEPTION)
     {
         $this->_stopAt = $stopAt;
         $this->_retCode = $retCode;
@@ -86,7 +89,6 @@ class Core_Engine
      * @var string
      */
     protected $_appHelpMessage = false;
-
     /**
      * Reference to drivers with different roles
      *
@@ -133,14 +135,17 @@ class Core_Engine
             self::$out->outputAdd(new Output_Cli(array()));
         }
 
-        // initialize class autoloading
-        $this->_initAutoload();
-
         // process configuration arguments
         $this->_optionsCmd = $this->_loadConfigFromArguments($cmdArguments);
 
         // load configuration from config files
         $this->_loadConfigFiles();
+
+        // prepare final options
+        $this->_options = self::array_merge_recursive_distinct(self::getConfigOptions(CfgPart::DEFAULTS), $this->_optionsIni, $this->_optionsCmd);
+
+        // initialize class autoloading
+        $this->_initAutoload();
     }
 
     public function finish()
@@ -285,25 +290,20 @@ class Core_Engine
         }
     }
     
-    protected function _getDefaultOptions()
-    {
-        return array();
-    }
-
     protected function _configureOutput()
     {
         // remove default output driver
         self::$out->outputRemove();
 
         // add configured outputs
-        if (isset($this->_options['engine']['output'])) {
-            if (!is_array($this->_options['engine']['output'])) {
+        if (isset($this->_options['engine']['outputs'])) {
+            if (!is_array($this->_options['engine']['outputs'])) {
                 // correct user mistake in configuration
-                $this->_options['engine']['output'] = array($this->_options['engine']['output']);
+                $this->_options['engine']['outputs'] = array($this->_options['engine']['outputs']);
             }
-            foreach ($this->_options['engine']['output'] as $keyName) {
-                $params = array_key_exists('output', $this->_options) && array_key_exists($keyName, $this->_options['output'])
-                        ? $this->_options['output'][$keyName]
+            foreach ($this->_options['engine']['outputs'] as $keyName) {
+                $params = array_key_exists('outputs', $this->_options) && array_key_exists($keyName, $this->_options['outputs'])
+                        ? $this->_options['outputs'][$keyName]
                         : array();
                 $class = array_key_exists('class', $params) ? $params['class'] : $keyName;
                 $class = "Output_".ucfirst($class);
@@ -379,9 +379,6 @@ class Core_Engine
 
     public function init()
     {
-        // prepare final options
-        $this->_options = self::array_merge_recursive_distinct($this->_getDefaultOptions(), $this->_optionsIni, $this->_optionsCmd);
-
         try {
             if (!isset($this->_options['engine'])) {
                 throw new Core_StopException("You have to configure `engine`.", "init");
@@ -408,7 +405,7 @@ class Core_Engine
             self::$out->showHelp($this->_appHelpMessage);
             return false;
         } catch (Exception $e) {
-            $myE = new Core_StopException("", "engine init", null, Core_StopException::FOREIGN_EXCEPTION);
+            $myE = new Core_StopException("", "engine init", null, Core_StopException::RETCODE_FOREIGN_EXCEPTION);
             $myE->setException($e);
             $this->_stopAt = $myE;
             throw $e;
@@ -422,9 +419,14 @@ class Core_Engine
         $this->_appHelpMessage = $helpMessage;
     }
 
+    /**
+     * @return void
+     */
     protected function _initAutoload()
     {
         self::$out->logDebug("initializing class autoloading");
+
+        // load default classes
         require_once "core/FsObject.php";
         require_once "output/Empty.php";
         require_once "output/Cli.php";
@@ -436,6 +438,16 @@ class Core_Engine
         require_once "storage/Filesystem/FileStat.php";
         require_once "storage/Filesystem.php";
         require_once "filter/RegExp.php";
+
+        // load classes from extensions
+        foreach ($this->_options['engine']['extensions'] as $path) {
+            if (file_exists($path.'/_init.php')) {
+                self::$out->logNotice("extending functionality with drivers from '$path'");
+                require_once $path.'/_init.php';
+            } else {
+                self::$out->logWarning("no extension found in '$path' (_init.php missing)");
+            }
+        }
     }
 
     public function getUniqueKey()
@@ -479,5 +491,53 @@ class Core_Engine
             && $this->_runPhase("shutdown", $orders);
 
         return true;
+    }
+
+    public function generateIni()
+    {
+        $driver = array(
+            'engine' => array('engine' => self::getConfigOptions()),
+            'storage' => array(),
+            'filter' => array(),
+            'compare' => array(),
+            'output' => array(),
+        );
+        // request getConfigOptions on all drivers
+        foreach (get_declared_classes() as $className) {
+            $implements = array_intersect(
+                class_implements($className),
+                array('Storage_Interface', 'Output_Interface', 'Filter_Interface', 'Compare_Interface')
+            );
+            foreach ($implements as $s) {
+                $s = strtolower(substr($s, 0, -10));
+                $driver[$s][$className] = call_user_func(array($className, 'getConfigOptions'));
+            }
+        }
+
+        // render INI
+
+        return "TODO does collect data, but is not generating INI content";
+    }
+
+    static public function getConfigOptions($part=null)
+    {
+        $opt = array(
+            CfgPart::DEFAULTS=>array(
+                'extensions'=>array(),
+            ),
+            CfgPart::DESCRIPTIONS=>array(
+                'extensions'=><<<TXT
+Directories with additional drivers. Structure of this directory has to follow xtbackup folder hierarchy.
+It is possible to use ENGINE_DIR constant in INI, which points to parent folder of core/Engine.php.
+TXT
+            ),
+            CfgPart::REQUIRED=>array('local', 'remote', 'compare')
+        );
+
+        if (is_null($part)) {
+            return $opt;
+        } else {
+            return $opt[$part];
+        }
     }
 }

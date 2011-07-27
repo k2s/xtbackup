@@ -1,5 +1,5 @@
 <?php
 interface Output_Interface
 {
-    // TODO needed ?
+    static public function getConfigOptions($part=null);
 }

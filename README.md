@@ -55,6 +55,7 @@ The purpose of multiple `ini[]` options and precedence of command line options o
 * security, credentials may be stored in private INI files
 
 To start with backup follow:
+
 * run: `xtbackup.php --init > myconfig.ini`
 * edit myconfig.ini
 * run: `xtbackup.php ini[]=myconfig.ini`

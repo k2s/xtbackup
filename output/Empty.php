@@ -93,5 +93,6 @@ class Output_Empty implements Output_Interface
     static public function getConfigOptions($part = null)
     {
         // TODO: Implement getConfigOptions() method.
+        return array();
     }
 }

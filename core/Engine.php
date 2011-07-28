@@ -2,7 +2,7 @@
 require_once "core/CfgPart.php";
 
 // may be used in INI
-!defined('ENGINE_DIR') && define("ENGINE_DIR", realpath(__DIR__.'/../').'/');
+!defined('ENGINE_DIR') && define("ENGINE_DIR", realpath(__DIR__ . '/../') . '/');
 
 class Core_StopException extends Exception
 {
@@ -21,9 +21,9 @@ class Core_StopException extends Exception
     /**
      * @var bool|Exception
      */
-    protected $_foreignException=false;
+    protected $_foreignException = false;
 
-    public function __construct($message, $stopAt, $previous=null, $retCode=self::RETCODE_EXCEPTION)
+    public function __construct($message, $stopAt, $previous = null, $retCode = self::RETCODE_EXCEPTION)
     {
         $this->_stopAt = $stopAt;
         $this->_retCode = $retCode;
@@ -37,7 +37,7 @@ class Core_StopException extends Exception
 
     public function getException()
     {
-        return false===$this->_foreignException ? $this : $this->_foreignException;
+        return false === $this->_foreignException ? $this : $this->_foreignException;
     }
 
     public function getStopAt()
@@ -117,22 +117,25 @@ class Core_Engine
      * The $output object is used already before INI is loaded so it is important object to see errors in configuration.
      *
      * @param array $cmdArguments
-     * @param Output_Interface $output default logging object, if not defined Output_Cli will be used
+     * @param Output_Interface $output default logging object, if null Output_Cli will be used, if FALSE no output will happen
      *
      * @return \Core_Engine
      */
-    public function __construct($cmdArguments=array(), $output=null)
+    public function __construct($cmdArguments = array(), $output = null)
     {
         // we need to have at least output class as soon as possible
         require_once 'output/Interface.php';
         require_once 'output/Stack.php';
         self::$out = new Output_Stack();
-        if (!is_null($output)) {
-            self::$out->outputAdd($output);
-        } else {
-            // add Output_Cli as default output for startup
-            require_once 'output/Cli.php';
-            self::$out->outputAdd(new Output_Cli(array()));
+        if (false!==$output) {
+            if (!is_null($output)) {
+                // output was passed
+                self::$out->outputAdd($output);
+            } else {
+                // add Output_Cli as default output for startup
+                require_once 'output/Cli.php';
+                self::$out->outputAdd(new Output_Cli(array()));
+            }
         }
 
         // process configuration arguments
@@ -151,16 +154,16 @@ class Core_Engine
     public function finish()
     {
         self::$out->finish($this->_stopAt);
-        if (false===$this->_stopAt) {
+        if (false === $this->_stopAt) {
             return Core_StopException::RETCODE_OK;
         } else {
             return $this->_stopAt->getReturnCode();
         }
     }
 
-    public function loadIni($fileName, $onlyReturn=false)
+    public function loadIni($fileName, $onlyReturn = false)
     {
-        if (false!==$this->_options) {
+        if (false !== $this->_options) {
             // if init() already executed
             self::$out->stop("init() already executed, loadIni() is not allowed any more.");
             return array();
@@ -197,7 +200,7 @@ class Core_Engine
     protected function _loadConfigFiles()
     {
         if (!isset($this->_optionsCmd['ini'])) {
-            return ;
+            return;
         }
 
         foreach ($this->_optionsCmd['ini'] as $fileName) {
@@ -212,18 +215,18 @@ class Core_Engine
     {
         // TODO change this code to build INI string and load it with loadIni()
         $options = array();
-        for ($i=1; $i<count($cmd); $i++) {
+        for ($i = 1; $i < count($cmd); $i++) {
             // clean up param name and value
             $a = explode("=", $cmd[$i], 2);
             $param = trim($a[0]);
             $param = ltrim($param, '-');
-            if (substr($param, -2)=="[]") {
+            if (substr($param, -2) == "[]") {
                 $isArray = true;
                 $param = substr($param, 0, -2);
             } else {
                 $isArray = false;
             }
-            if (count($a)>1) {
+            if (count($a) > 1) {
                 $val = trim($a[1], ' "');
             } else {
                 $val = null;
@@ -261,35 +264,35 @@ class Core_Engine
      **/
     public static function array_merge_recursive_distinct()
     {
-    	$arrays = func_get_args();
-    	$base = array_shift($arrays);
-    	if(!is_array($base)) $base = empty($base) ? array() : array($base);
-    	foreach($arrays as $append) {
-    		if(!is_array($append)) $append = array($append);
-    		foreach($append as $key => $value) {
-    			if(!array_key_exists($key, $base) and !is_numeric($key)) {
-    				$base[$key] = $append[$key];
-    				continue;
-    			}
-    			if(isset($base[$key]) && is_array($base[$key])) {
-    				$base[$key] = self::array_merge_recursive_distinct($base[$key], $append[$key]);
-    			} else if(is_numeric($key) /*&& is_array($value)*/) {
-    				if(!in_array($value, $base)) $base[] = $value;
-    			} else {
-    				$base[$key] = $value;
-    			}
-    		}
-    	}
-    	return $base;
+        $arrays = func_get_args();
+        $base = array_shift($arrays);
+        if (!is_array($base)) $base = empty($base) ? array() : array($base);
+        foreach ($arrays as $append) {
+            if (!is_array($append)) $append = array($append);
+            foreach ($append as $key => $value) {
+                if (!array_key_exists($key, $base) and !is_numeric($key)) {
+                    $base[$key] = $append[$key];
+                    continue;
+                }
+                if (isset($base[$key]) && is_array($base[$key])) {
+                    $base[$key] = self::array_merge_recursive_distinct($base[$key], $append[$key]);
+                } else if (is_numeric($key) /*&& is_array($value)*/) {
+                    if (!in_array($value, $base)) $base[] = $value;
+                } else {
+                    $base[$key] = $value;
+                }
+            }
+        }
+        return $base;
     }
 
-    public function listOptions($key=null)
+    public function listOptions($key = null)
     {
         if (is_null($key)) {
-            
+
         }
     }
-    
+
     protected function _configureOutput()
     {
         // remove default output driver
@@ -306,7 +309,7 @@ class Core_Engine
                         ? $this->_options['outputs'][$keyName]
                         : array();
                 $class = array_key_exists('class', $params) ? $params['class'] : $keyName;
-                $class = "Output_".ucfirst($class);
+                $class = "Output_" . ucfirst($class);
                 self::$out->outputAdd(new $class($params));
             }
         }
@@ -323,9 +326,9 @@ class Core_Engine
 
         $params = $this->_options['compare'][$key];
         if (isset($params['class'])) {
-            $class = "Compare_".ucfirst($params['class']);            
+            $class = "Compare_" . ucfirst($params['class']);
         } else {
-            $class = "Compare_".ucfirst($key);
+            $class = "Compare_" . ucfirst($key);
         }
         self::$out->logDebug("configuring compare driver '$class' from key '$key'");
         return new $class($this, self::$out, $params);
@@ -339,9 +342,9 @@ class Core_Engine
 
         $params = $this->_options['storage'][$key];
         if (isset($params['class'])) {
-            $class = "Storage_".ucfirst($params['class']);
+            $class = "Storage_" . ucfirst($params['class']);
         } else {
-            $class = "Storage_".ucfirst($key);
+            $class = "Storage_" . ucfirst($key);
         }
         self::$out->logDebug("configuring storage driver '$class' from key '$key'");
         return new $class($this, self::$out, $params);
@@ -356,7 +359,7 @@ class Core_Engine
         self::$out->logDebug("local storage will be configured based on key '$key'");
         $this->_roles[self::ROLE_LOCAL] = $this->_getStorage($key);
     }
-    
+
     protected function _configureRemoteStorage()
     {
         if (!isset($this->_options['engine']['remote'])) {
@@ -441,10 +444,10 @@ class Core_Engine
 
         // load classes from extensions
         foreach ($this->_options['engine']['extensions'] as $path) {
-            if (file_exists($path.'/_init.php')) {
+            if (file_exists($path . '/_init.php')) {
                 self::$out->logNotice("extending functionality with drivers from '$path'");
                 /** @noinspection PhpIncludeInspection */
-                require_once $path.'/_init.php';
+                require_once $path . '/_init.php';
             } else {
                 self::$out->logWarning("no extension found in '$path' (_init.php missing)");
             }
@@ -465,7 +468,7 @@ class Core_Engine
     {
         self::$out->logNotice("phase start: $phase");
         self::$out->mark();
-        foreach ($order as $role=>$driver)
+        foreach ($order as $role => $driver)
         {
             if (method_exists($driver, $phase)) {
                 $driver->$phase($role, $this->_roles);
@@ -478,18 +481,18 @@ class Core_Engine
 
     public function run()
     {
-        if ($this->_stopAt!==false) {
+        if ($this->_stopAt !== false) {
             return false;
         }
 
         $orders = $this->_roles;
 
         $this->_runPhase("init", $orders)
-            && $this->_runPhase("refreshLocal", $orders)
-            && $this->_runPhase("refreshRemote", $orders)
-            && $this->_runPhase("compare", $orders)
-            && $this->_runPhase("updateRemote", $orders)
-            && $this->_runPhase("shutdown", $orders);
+        && $this->_runPhase("refreshLocal", $orders)
+        && $this->_runPhase("refreshRemote", $orders)
+        && $this->_runPhase("compare", $orders)
+        && $this->_runPhase("updateRemote", $orders)
+        && $this->_runPhase("shutdown", $orders);
 
         return true;
     }
@@ -497,7 +500,7 @@ class Core_Engine
     public function generateIni()
     {
         $driver = array(
-            'engine' => array('engine' => self::getConfigOptions()),
+            'engine' => array('engine' => self::compactConfig(self::getConfigOptions())),
             'storage' => array(),
             'filter' => array(),
             'compare' => array(),
@@ -511,34 +514,105 @@ class Core_Engine
             );
             foreach ($implements as $s) {
                 $s = strtolower(substr($s, 0, -10));
-                $driver[$s][$className] = call_user_func(array($className, 'getConfigOptions'));
+                $driver[$s][$className] = self::compactConfig(call_user_func(array($className, 'getConfigOptions')));
             }
         }
 
-        // render INI
+        // render INI sections
+        $ini = array();
+        foreach ($driver as $type => $defs) {
+            $ini[$type] = array();
+            foreach ($defs as $key => $options) {
+                foreach ($options as $option=>$d) {
+                    $cfg = "$key.$option";
+                    if ($d[CfgPart::REQUIRED]) {
+                        $ini[$type][] = "; !!!";
+                    }
+                    if ($d[CfgPart::DESCRIPTIONS]) {
+                        $ini[$type][] = "; ".str_replace("\n", "\n; ", $d[CfgPart::DESCRIPTIONS]);
+                        $ini[$type][] = ";";
+                    }
+                    if (array_key_exists(CfgPart::DEFAULTS, $d)) {
+                        //$ini[$type][] = "; default:";
+                        $ini[$type][] = "; default: $cfg = " . $d[CfgPart::DEFAULTS];
+                    }
+                    if ($d[CfgPart::REQUIRED]) {
+                        $ini[$type][] = "$cfg = ???";
+                    } else {
+                        $ini[$type][] = "; $cfg = ";
+                    }
+                    $ini[$type][] = "";
+                }
+            }
+        }
 
-        return "TODO does collect data, but is not generating INI content";
+        // put INI sections base on priority to resulting INI
+        $priority = array('engine', '_cmds', 'filter', 'output', 'storage', 'compare');
+        $res = array();
+        foreach ($priority as $section) {
+            if (isset($ini[$section])) {
+                $res[] = implode(PHP_EOL, $ini[$section]);
+            }
+        }
+
+        return implode(PHP_EOL, $res);
     }
 
-    static public function getConfigOptions($part=null)
+    static public function compactConfig($options)
+    {
+        if (!is_array($options)) {
+            return array();
+        }
+
+        // add missing parts
+        !isset($options[CfgPart::DEFAULTS]) && $options[CfgPart::DEFAULTS] = array();
+        !isset($options[CfgPart::DESCRIPTIONS]) && $options[CfgPart::DESCRIPTIONS] = array();
+        !isset($options[CfgPart::REQUIRED]) && $options[CfgPart::REQUIRED] = array();
+
+        // build full list of options
+        $keys = array_keys($options[CfgPart::DEFAULTS])
+                + array_keys($options[CfgPart::DESCRIPTIONS])
+                + array_keys($options[CfgPart::REQUIRED]);
+
+        // define each parameter
+        $params = array();
+        foreach ($keys as $key) {
+            $params[$key] = array(
+                CfgPart::DESCRIPTIONS=>isset($options[CfgPart::DESCRIPTIONS][$key]) ? $options[CfgPart::DESCRIPTIONS][$key] : null,
+                CfgPart::REQUIRED=>isset($options[CfgPart::REQUIRED][$key]) ? $options[CfgPart::REQUIRED][$key] : false,
+            );
+            // we have to left out default if it is not defined, to be able to detect that there is no default
+            if (array_key_exists($key, $options[CfgPart::DEFAULTS])) {
+                $params[$key][CfgPart::DEFAULTS] = $options[CfgPart::DEFAULTS][$key];
+            }
+        }
+
+        return $params;
+    }
+
+    static public function getConfigOptions($part = null)
     {
         $opt = array(
-            CfgPart::DEFAULTS=>array(
-                'extensions'=>array(),
+            CfgPart::DEFAULTS => array(
+                'extensions' => array(),
             ),
-            CfgPart::DESCRIPTIONS=>array(
-                'extensions'=><<<TXT
-Directories with additional drivers. Structure of this directory has to follow xtbackup folder hierarchy.
+            CfgPart::DESCRIPTIONS => array(
+                'extensions' => <<<TXT
+Register directories with additional drivers.
+Structure of such directory has to follow xtbackup folder hierarchy.
 It is possible to use ENGINE_DIR constant in INI, which points to parent folder of core/Engine.php.
+
+Example:
+engine.extensions[] = ENGINE_DIR "/examples/plugins"
 TXT
             ),
-            CfgPart::REQUIRED=>array('local', 'remote', 'compare')
+            CfgPart::REQUIRED => array('local'=>true, 'remote'=>true, 'compare'=>true)
         );
 
         if (is_null($part)) {
             return $opt;
         } else {
-            return $opt[$part];
+            return isset($opt[$part]) ? $opt[$part] : array();
         }
     }
 }

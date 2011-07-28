@@ -18,10 +18,19 @@ if (false!==$helpIdx) {
     exit(Core_StopException::RETCODE_OK);
 }
 
-$engine = new Core_Engine($argv);
-
-// show help message
+// we need quite output if initializing INI file from start of the engine
 $helpIdx = array_search("--init", $argv);
+if (false!==$helpIdx) {
+    $output = false;
+} else {
+    // default output will be used in start phase of engine
+    $output = null;
+}
+
+// initialize backup engine
+$engine = new Core_Engine($argv, $output);
+
+// show help message and stop if requested
 if (false!==$helpIdx) {
     echo $engine->generateIni();
     exit(Core_StopException::RETCODE_OK);

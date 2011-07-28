@@ -443,6 +443,7 @@ class Core_Engine
         foreach ($this->_options['engine']['extensions'] as $path) {
             if (file_exists($path.'/_init.php')) {
                 self::$out->logNotice("extending functionality with drivers from '$path'");
+                /** @noinspection PhpIncludeInspection */
                 require_once $path.'/_init.php';
             } else {
                 self::$out->logWarning("no extension found in '$path' (_init.php missing)");

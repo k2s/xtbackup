@@ -183,7 +183,7 @@ class Storage_S3 implements Storage_Interface
                 /** @var $v CFResponse */
                 // save object
 //                $meta = $response[$metaId++];
-                $fsObject = $this->_createFsObject($v, /*$meta*/array());
+                $fsObject = $this->_createFsObject($v, null);
                 $fsObject->path = $this->_getPathWithBasedir($fsObject->path);
                 $compare->updateFromRemote($fsObject);
 
@@ -210,7 +210,7 @@ class Storage_S3 implements Storage_Interface
      *
      * @return Core_FsObject
      */
-    public function _createFsObject($v, $meta)
+    public function _createFsObject($v, $meta=null)
     {
         $path = (string) $v->Key;
 

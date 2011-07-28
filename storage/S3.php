@@ -398,12 +398,24 @@ should upload/remove of data be executed ? (yes/no/simulate)
   no:       will not start update process
   simulate: will output progress, but will not really transfer data
 TXT
-            ,
-                'compatibilityTest' => 'find out if yur PC is compatible with Amazon PHP SDK, it will always stop the application if enabled',
-                'key.access' => 'S3 authentification key',
-                'key.secret' => 'S3 authentification key',
+                ,
+                'compatibilityTest' => <<<TXT
+Find out if yur PC is compatible with Amazon PHP SDK, it will always stop the application if enabled
+TXT
+                ,
+
+                'key.access' => <<<TXT
+S3 authentification key
+Best practice is to place this option into separate INI file readable only by user executing backup.
+TXT
+                ,
+                'key.secret' => <<<TXT
+S3 authentification key
+Best practice is to place this option into separate INI file readable only by user executing backup.
+TXT
+                ,
             ),
-            CfgPart::REQUIRED => array('bucket', 'key.access', 'key.secret')
+            CfgPart::REQUIRED => array('bucket'=>true, 'key.access'=>true, 'key.secret'=>true)
         );
 
         if (is_null($part)) {

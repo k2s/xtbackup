@@ -64,6 +64,9 @@ To start with backup follow:
 
 Read output of `xtbackup.php --init`, that is all you need.
 
+### Program output
+
+
 Support
 -------
 

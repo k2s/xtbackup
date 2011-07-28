@@ -499,6 +499,10 @@ class Core_Engine
 
     public function generateIni()
     {
+        $classDefinition = array(
+            CfgPart::REQUIRED => false,
+            CfgPart::DESCRIPTIONS => "Driver class",
+        );
         $driver = array(
             'engine' => array('engine' => self::compactConfig(self::getConfigOptions())),
             'storage' => array(),
@@ -522,9 +526,32 @@ class Core_Engine
         $ini = array();
         foreach ($driver as $type => $defs) {
             $ini[$type] = array();
-            foreach ($defs as $key => $options) {
+            foreach ($defs as $class => $options) {
+                // build the full config key
+                $classCfg = array();
+                $key = $class;
+                if ($type!=="engine") {
+                    // only engine does not have prefix
+                    $classCfg[] = $type;
+                    $key = strtolower($key);
+                    if (strpos($key, $type."_")===0) {
+                        $key =  substr($key, strlen($type)+1);
+                    }
+                    // we want to show that class does not need to be the key
+                    $key = "my".$key;
+                    //array_unshift($options, array("class"=>array_merge($classDefinition, array('value'=>$class))));
+                    $options = array("class"=>$classDefinition + array('value'=>$class)) + $options;
+                }
+                $classCfg[] = $key;
+
+                // handle options
                 foreach ($options as $option=>$d) {
-                    $cfg = "$key.$option";
+                    if (isset($d[CfgPart::HINT_TYPE]) && $d[CfgPart::HINT_TYPE]==CfgPart::TYPE_ARRAY) {
+                        $option .= "[]";
+                    }
+                    $cfg = implode(".", array_merge($classCfg, array($option)));
+
+                    // render INI lines
                     if ($d[CfgPart::REQUIRED]) {
                         $ini[$type][] = "; !!!";
                     }
@@ -537,9 +564,13 @@ class Core_Engine
                         $ini[$type][] = "; default: $cfg = " . $d[CfgPart::DEFAULTS];
                     }
                     if ($d[CfgPart::REQUIRED]) {
-                        $ini[$type][] = "$cfg = ???";
+                        $ini[$type][] = "$cfg = <enter your value>";
                     } else {
-                        $ini[$type][] = "; $cfg = ";
+                        if (array_key_exists("value", $d)) {
+                            $ini[$type][] = "$cfg = " . $d['value'];
+                        } else {
+                            $ini[$type][] = "; $cfg = ";
+                        }
                     }
                     $ini[$type][] = "";
                 }
@@ -568,9 +599,11 @@ class Core_Engine
         !isset($options[CfgPart::DEFAULTS]) && $options[CfgPart::DEFAULTS] = array();
         !isset($options[CfgPart::DESCRIPTIONS]) && $options[CfgPart::DESCRIPTIONS] = array();
         !isset($options[CfgPart::REQUIRED]) && $options[CfgPart::REQUIRED] = array();
+        !isset($options[CfgPart::HINTS]) && $options[CfgPart::HINTS] = array();
 
         // build full list of options
         $keys = array_keys($options[CfgPart::DEFAULTS])
+                + array_keys($options[CfgPart::HINTS])
                 + array_keys($options[CfgPart::DESCRIPTIONS])
                 + array_keys($options[CfgPart::REQUIRED]);
 
@@ -585,6 +618,12 @@ class Core_Engine
             if (array_key_exists($key, $options[CfgPart::DEFAULTS])) {
                 $params[$key][CfgPart::DEFAULTS] = $options[CfgPart::DEFAULTS][$key];
             }
+            // add hints
+            if (array_key_exists($key, $options[CfgPart::HINTS])) {
+                foreach ($options[CfgPart::HINTS][$key] as $hint=>$def) {
+                    $params[$key][$hint] = $def;
+                }
+            }
         }
 
         return $params;
@@ -593,10 +632,30 @@ class Core_Engine
     static public function getConfigOptions($part = null)
     {
         $opt = array(
+            CfgPart::HINTS =>array(
+                'extensions' => array(CfgPart::HINT_TYPE=>CfgPart::TYPE_ARRAY),
+                'outputs' => array(CfgPart::HINT_TYPE=>CfgPart::TYPE_ARRAY),
+            ),
             CfgPart::DEFAULTS => array(
                 'extensions' => array(),
             ),
             CfgPart::DESCRIPTIONS => array(
+                'outputs' => <<<TXT
+You may configure multiple output configurations to be used by engine.
+TXT
+                ,
+                'compare' => <<<TXT
+Configure ...
+TXT
+                ,
+                'remote' => <<<TXT
+Configure ...
+TXT
+                ,
+                'local' => <<<TXT
+Configure ...
+TXT
+                ,
                 'extensions' => <<<TXT
 Register directories with additional drivers.
 Structure of such directory has to follow xtbackup folder hierarchy.

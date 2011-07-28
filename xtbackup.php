@@ -18,9 +18,15 @@ if (false!==$helpIdx) {
     exit(Core_StopException::RETCODE_OK);
 }
 
+// it is possible to suppress output to console in start phase of engine
+$quiteStartIdx = array_search("--quite-start", $argv);
+if (false!==$quiteStartIdx) {
+    unset($argv[$quiteStartIdx]);
+}
+
 // we need quite output if initializing INI file from start of the engine
-$helpIdx = array_search("--init", $argv);
-if (false!==$helpIdx) {
+$initIdx = array_search("--init", $argv);
+if (false!==$initIdx || false!==$quiteStartIdx) {
     $output = false;
 } else {
     // default output will be used in start phase of engine
@@ -31,7 +37,7 @@ if (false!==$helpIdx) {
 $engine = new Core_Engine($argv, $output);
 
 // show help message and stop if requested
-if (false!==$helpIdx) {
+if (false!==$initIdx) {
     echo $engine->generateIni();
     exit(Core_StopException::RETCODE_OK);
 }

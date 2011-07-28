@@ -44,6 +44,7 @@ The controll programm `xtbackup.php` is provided to make backup task functionali
 `xtbackup.php` by itself interprets following command line options:
 * --help : will output basic information how to use the programm
 * --init : generate documented INI skeleton
+* --quite-start : it is possible to suppress output to console in start phase of engine
 
 All other command line parameters passed to `xtbackup.php` are forwarded to `xtbackup engine` as configuration options.
 

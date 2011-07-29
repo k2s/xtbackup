@@ -63,10 +63,16 @@ To start with backup follow:
 
 ### Configuration reference
 
-Read output of `xtbackup.php --init`, that is all you need.
+Read output of `xtbackup.php --init`, that is all we have and yes, you are welcome to contribute with more and better documentation.
 
 ### Program output
 
+xtbackup.php
+------------
+
+### Return codes
+
+### Creating PHAR package
 
 Support
 -------

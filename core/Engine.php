@@ -145,7 +145,14 @@ class Core_Engine
         $this->_loadConfigFiles();
 
         // prepare final options
-        $this->_options = self::array_merge_recursive_distinct(self::getConfigOptions(CfgPart::DEFAULTS), $this->_optionsIni, $this->_optionsCmd);
+        $this->_options = self::array_merge_recursive_distinct(
+            $this->_optionsIni, $this->_optionsCmd
+        );
+        // add default options to engine
+        $this->_options['engine'] = self::array_merge_recursive_distinct(
+            self::getConfigOptions(CfgPart::DEFAULTS),
+            $this->_options['engine']
+        );
 
         // initialize class autoloading
         $this->_initAutoload();
@@ -153,6 +160,7 @@ class Core_Engine
 
     public function finish()
     {
+        self::$out->logNotice("peak of memory usage: ".memory_get_peak_usage(true));
         self::$out->finish($this->_stopAt);
         if (false === $this->_stopAt) {
             return Core_StopException::RETCODE_OK;
@@ -638,6 +646,7 @@ class Core_Engine
             ),
             CfgPart::DEFAULTS => array(
                 'extensions' => array(),
+                'outputs' => array('cli'),
             ),
             CfgPart::DESCRIPTIONS => array(
                 'outputs' => <<<TXT

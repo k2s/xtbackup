@@ -586,13 +586,25 @@ class Core_Engine
                     }
                     if (array_key_exists(CfgPart::DEFAULTS, $d)) {
                         //$ini[$type][] = "; default:";
-                        $ini[$type][] = "; default: $cfg = " . $d[CfgPart::DEFAULTS];
+                        $keyVal = $this->_renderKeyVal($cfg, $d[CfgPart::DEFAULTS], $d);
+                        if (count($keyVal)) {
+                            $ini[$type][] = "; default:";
+                            foreach ($keyVal as $s) {
+                                $ini[$type][] = ";     $s";
+                            }
+                        } else {
+                            $ini[$type][] = "; default: $keyVal[0]";
+                        }
+                        $ini[$type][] = "";
                     }
                     if ($d[CfgPart::REQUIRED]) {
                         $ini[$type][] = "$cfg = <enter your value>";
                     } else {
-                        if (array_key_exists("value", $d)) {
-                            $ini[$type][] = "$cfg = " . $d['value'];
+                        if (array_key_exists('value', $d)) {
+                            $keyVal = $this->_renderKeyVal($cfg, $d['value'], $d);
+                            foreach ($keyVal as $s) {
+                                $ini[$type][] = $s;
+                            }
                         } else {
                             $ini[$type][] = "; $cfg = ";
                         }
@@ -612,6 +624,31 @@ class Core_Engine
         }
 
         return implode(PHP_EOL, $res);
+    }
+
+    protected function _renderKeyVal($cfg, $val, $def)
+    {
+        $type = isset($def['type']) ? $def['type'] : CfgPart::TYPE_UNKNOWN;
+        if (CfgPart::TYPE_BOOL===$type) {
+            if (!is_string($val)) {
+                $val = $val ? "true" : "false";
+            }
+        }
+
+        $ret = array();
+        if (is_array($val)) {
+            if (count($val)>0) {
+                /** @noinspection PhpWrongForeachArgumentTypeInspection */
+                foreach ($val as $v) {
+                    $ret[] = "$cfg = $v";
+                }
+            } else {
+                $ret[] = "$cfg =";
+            }
+        } else {
+            $ret[] = "$cfg = $val";
+        }
+        return $ret;
     }
 
     static public function compactConfig($options)

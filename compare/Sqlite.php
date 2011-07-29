@@ -485,6 +485,12 @@ SQL;
     static public function getConfigOptions($part = null)
     {
         $opt = array(
+            CfgPart::HINTS =>array(
+                'testing' => array(CfgPart::HINT_TYPE=>CfgPart::TYPE_BOOL),
+                'rebuild' => array(CfgPart::HINT_TYPE=>CfgPart::TYPE_BOOL),
+                'keep' => array(CfgPart::HINT_TYPE=>CfgPart::TYPE_BOOL),
+                'compare' => array(CfgPart::HINT_TYPE=>CfgPart::TYPE_BOOL),
+            ),
             CfgPart::DEFAULTS => array(
                 'testing' => false,
                 'rebuild' => false,

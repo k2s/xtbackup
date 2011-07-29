@@ -667,19 +667,28 @@ class Core_Engine
             ),
             CfgPart::DESCRIPTIONS => array(
                 'outputs' => <<<TXT
+Reference output configuration key(s) which will be used to process output from engine.
 You may configure multiple output configurations to be used by engine.
+
+Example: engine.outputs[] = mycli
 TXT
                 ,
                 'compare' => <<<TXT
-Configure ...
+Reference compare configuration key which will be used to evaluate what files have to be backuped.
 TXT
                 ,
                 'remote' => <<<TXT
-Configure ...
+Reference storage configuration key which will be used as remote storage.
+Local storage will be backuped to remote storage.
+
+Example: engine.remote = mys3
 TXT
                 ,
                 'local' => <<<TXT
-Configure ...
+Reference storage configuration key which will be used as local storage.
+Local storage will be backuped to remote storage.
+
+Example: engine.local = myfilesystem
 TXT
                 ,
                 'extensions' => <<<TXT

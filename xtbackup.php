@@ -9,6 +9,21 @@
 // make sure we will find include files
 set_include_path(realpath(dirname(__FILE__)));
 
+// make some more adjustments to PHP configuration
+ini_set('display_startup_errors', true);
+ini_set('display_errors', true);
+ini_set('html_errors', false);
+ini_set('log_errors', false);
+ini_set('ignore_repeated_errors', false);
+ini_set('ignore_repeated_source', false);
+ini_set('report_memleaks', true);
+ini_set('track_errors', true);
+ini_set('docref_root', 0);
+ini_set('docref_ext', 0);
+error_reporting(E_ALL | E_STRICT);
+set_time_limit(0);
+
+// load engine core
 require_once 'core/Engine.php';
 
 // show help message

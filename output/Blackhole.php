@@ -2,7 +2,7 @@
 /**
  * Exists mainly for easier developing of new outputs without the need to fully implement Output_Interface
  */
-class Output_Empty implements Output_Interface
+class Output_Blackhole implements Output_Interface
 {
     protected $_options = array();
 

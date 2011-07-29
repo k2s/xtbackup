@@ -148,10 +148,12 @@ class Core_Engine
         $this->_options = self::array_merge_recursive_distinct(
             $this->_optionsIni, $this->_optionsCmd
         );
+
         // add default options to engine
-        $this->_options['engine'] = self::array_merge_recursive_distinct(
+        self::array_merge_defaults(
+            $this->_options['engine'],
             self::getConfigOptions(CfgPart::DEFAULTS),
-            $this->_options['engine']
+            self::getConfigOptions(CfgPart::HINTS)
         );
 
         // initialize class autoloading
@@ -292,6 +294,21 @@ class Core_Engine
             }
         }
         return $base;
+    }
+
+    public static function array_merge_defaults(&$options, $defaults, $hints)
+    {
+        foreach ($defaults as $key=>$val) {
+            if (array_key_exists($key, $options)) {
+                if (is_array($val)) {
+                    if (!isset($hints[$key], $hints[$key][CfgPart::HINT_TYPE])) {
+                        self::array_merge_defaults($options[$key], $defaults[$key], isset($hints[$key]) ? $hints[$key]:null);
+                    }
+                }
+            } else {
+                $options[$key] = $val;
+            }
+        }
     }
 
     public function listOptions($key = null)
@@ -439,7 +456,7 @@ class Core_Engine
 
         // load default classes
         require_once "core/FsObject.php";
-        require_once "output/Empty.php";
+        require_once "output/Blackhole.php";
         require_once "output/Cli.php";
         require_once "compare/Interface.php";
         require_once "compare/Task.php";

@@ -1,7 +1,7 @@
 <?php
-require_once 'output/Empty.php';
+require_once 'output/Blackhole.php';
 
-class Output_Cli extends Output_Empty
+class Output_Cli extends Output_Blackhole
 {
     /**
      * ID value of last started job

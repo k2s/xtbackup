@@ -1,61 +1,27 @@
 <?php
+require_once "core/StopException.php";
 require_once "core/CfgPart.php";
 
 // may be used in INI
 !defined('ENGINE_DIR') && define("ENGINE_DIR", realpath(__DIR__ . '/../') . '/');
 
-class Core_StopException extends Exception
-{
-    const RETCODE_OK = 0;
-    const RETCODE_FOREIGN_EXCEPTION = 1;
-    const RETCODE_EXCEPTION = 2;
-
-    /**
-     * @var string
-     */
-    protected $_stopAt;
-    /**
-     * @var int
-     */
-    protected $_retCode;
-    /**
-     * @var bool|Exception
-     */
-    protected $_foreignException = false;
-
-    public function __construct($message, $stopAt, $previous = null, $retCode = self::RETCODE_EXCEPTION)
-    {
-        $this->_stopAt = $stopAt;
-        $this->_retCode = $retCode;
-        parent::__construct($message, 0, $previous);
-    }
-
-    public function setException($e)
-    {
-        $this->_foreignException = $e;
-    }
-
-    public function getException()
-    {
-        return false === $this->_foreignException ? $this : $this->_foreignException;
-    }
-
-    public function getStopAt()
-    {
-        return $this->_stopAt;
-    }
-
-    public function getReturnCode()
-    {
-        return $this->_retCode;
-    }
-}
-
 class Core_Engine
 {
+    /**
+     * Major and minor version should be set here.
+     * If revision number is question mark getVersion() will try to determine it from git.
+     */
+    const VERSION = "0.1.?";
+
     const ROLE_REMOTE = "remote";
     const ROLE_LOCAL = "local";
     const ROLE_COMPARE = "compare";
+    /**
+     * Cached final version of core engine
+     *
+     * @var string
+     */
+    protected static $_version = false;
     /**
      * Output object, used to do logging and progress visualization tasks
      *
@@ -691,9 +657,44 @@ class Core_Engine
         return $params;
     }
 
+    /**
+     * Return current version of core engine
+     *
+     * @static
+     * @return string
+     */
+    static public function getVersion()
+    {
+        if (false===self::$_version) {
+            $version = self::VERSION;
+            if ("?"==substr($version, -1)) {
+                // try to determine revision number from git
+                self::$_version = substr($version, 0, -1) . self::getRevisionFromGit(ENGINE_DIR);
+            }
+        }
+
+        return self::$_version;
+    }
+
+    /**
+     * Obtain information about current git checkout
+     *
+     * It is useful also for extensions.
+     *
+     * @static
+     * @param string $path path where to look for version
+     * @return string revision description
+     */
+    static public function getRevisionFromGit($path)
+    {
+        // TODO we need to study git more and build this method
+        return "UNKNOWN";
+    }
+
     static public function getConfigOptions($part = null)
     {
         $opt = array(
+            CfgPart::VERSION => self::getVersion(),
             CfgPart::HINTS =>array(
                 'extensions' => array(CfgPart::HINT_TYPE=>CfgPart::TYPE_ARRAY),
                 'outputs' => array(CfgPart::HINT_TYPE=>CfgPart::TYPE_ARRAY),

@@ -1,13 +1,21 @@
 <?php
 class CfgPart
 {
+    /*** List of information returned from getConfigOptions() methods ***/
     const DEFAULTS = 1;
     const DESCRIPTIONS = 2;
     const REQUIRED = 3;
     const HINTS = 4;
+    /**
+     * Returns version of driver/engine.
+     * Optional: engine version is used if not provided
+     */
+    const VERSION = 5;
 
+    /*** List of hint categories ***/
     const HINT_TYPE = "type";
 
+    /*** List of data types used in INI configuration ***/
     const TYPE_NUMBER = 1;
     const TYPE_STRING = 2;
     const TYPE_BOOL = 3;

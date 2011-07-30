@@ -137,6 +137,13 @@ class Core_Engine
         }
     }
 
+    /**
+     * Load INI file or lines into configuration array
+     *
+     * @param string|array $fileName INI file name or array of INI file line
+     * @param bool $onlyReturn don't merge to $this->_optionsIni if true
+     * @return array
+     */
     public function loadIni($fileName, $onlyReturn = false)
     {
         if (false !== $this->_options) {
@@ -145,12 +152,19 @@ class Core_Engine
             return array();
         }
 
-        $params = @parse_ini_file($fileName);
+        if (is_array($fileName)) {
+            // we use parse_ini_string
+            $params = @parse_ini_string(implode("\n", $fileName));
+        } else {
+            // load and parse INI file
+            $params = @parse_ini_file($fileName);
+        }
         if (false === $params) {
             $le = error_get_last();
             self::$out->stop($le['message']);
         }
 
+        // process keys
         $options = array();
         foreach ($params as $key => $val) {
             $a = explode(".", $key);
@@ -189,40 +203,15 @@ class Core_Engine
 
     protected function _loadConfigFromArguments($cmd)
     {
-        // TODO change this code to build INI string and load it with loadIni()
-        $options = array();
+        $params = array();
         for ($i = 1; $i < count($cmd); $i++) {
-            // clean up param name and value
-            $a = explode("=", $cmd[$i], 2);
-            $param = trim($a[0]);
-            $param = ltrim($param, '-');
-            if (substr($param, -2) == "[]") {
-                $isArray = true;
-                $param = substr($param, 0, -2);
-            } else {
-                $isArray = false;
+            $s = trim($cmd[$i]);
+            if ($s[0]!='-') {
+                // parameters which can't be passed in INI are excluded
+                $params[] = $cmd[$i];
             }
-            if (count($a) > 1) {
-                $val = trim($a[1], ' "');
-            } else {
-                $val = null;
-            }
-            // change param name into nested array
-            $a = explode(".", $param);
-            $param = array();
-            $b = &$param;
-            foreach ($a as $k) {
-                $b[$k] = array();
-                $b = &$b[$k];
-            }
-            if ($isArray) {
-                $b[] = $val;
-            } else {
-                $b = $val;
-            }
-            // store in options
-            $options = self::array_merge_recursive_distinct($options, $param);
         }
+        $options = $this->loadIni($params, true);
         return $options;
     }
 

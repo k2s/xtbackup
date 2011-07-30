@@ -11,6 +11,16 @@ class CfgPart
      * Optional: engine version is used if not provided
      */
     const VERSION = 5;
+    /**
+     * Options listed here will be stored in compare driver.
+     * They invalidate any cached data if changed in next run.
+     */
+    const MONITOR = 6;
+    /**
+     * Options listed here will be repeated in end of INI files.
+     * They are suggested to be changed to manipulated program execution.
+     */
+    const SUGGESTED = 7;
 
     /*** List of hint categories ***/
     const HINT_TYPE = "type";

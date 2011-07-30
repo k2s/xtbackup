@@ -506,7 +506,8 @@ SQL;
                 'compare' => 'should compare be executed ?',
                 'file' => 'path and file name of sqlite database file to use'
             ),
-            CfgPart::REQUIRED => array('file')
+            CfgPart::REQUIRED => array('file'=>true),
+            CfgPart::SUGGESTED => array('testing'=>true, 'keep'=>true, 'rebuild'=>true),
         );
 
         if (is_null($part)) {

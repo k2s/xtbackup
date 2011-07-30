@@ -493,6 +493,7 @@ class Core_Engine
         $classDefinition = array(
             CfgPart::REQUIRED => false,
             CfgPart::DESCRIPTIONS => "Driver class",
+            CfgPart::SUGGESTED => false,
         );
         $driver = array(
             'engine' => array('engine' => self::compactConfig(self::getConfigOptions())),
@@ -544,7 +545,7 @@ class Core_Engine
 
                     // render INI lines
                     if ($d[CfgPart::REQUIRED]) {
-                        $ini[$type][] = "; !!!";
+                        $ini[$type][] = "; REQUIRED";
                     }
                     if ($d[CfgPart::DESCRIPTIONS]) {
                         $ini[$type][] = "; ".str_replace("\n", "\n; ", $d[CfgPart::DESCRIPTIONS]);
@@ -564,27 +565,50 @@ class Core_Engine
                         $ini[$type][] = "";
                     }
                     if ($d[CfgPart::REQUIRED]) {
-                        $ini[$type][] = "$cfg = <enter your value>";
+                        $ini[$type][] = "; $cfg = <enter your value and uncomment>";
                     } else {
                         if (array_key_exists('value', $d)) {
                             $keyVal = $this->_renderKeyVal($cfg, $d['value'], $d);
                             foreach ($keyVal as $s) {
-                                $ini[$type][] = $s;
+                                if ($d[CfgPart::SUGGESTED]) {
+                                    $ini[$type][] = "; see suggested section for values";
+                                    $ini['suggested'][] = $s;
+                                } else {
+                                    $ini[$type][] = $s;
+                                }
                             }
                         } else {
-                            $ini[$type][] = "; $cfg = ";
+                            if ($d[CfgPart::SUGGESTED]) {
+                                $ini[$type][] = "; see suggested section for values";
+                                $ini['suggested'][] = "; $cfg = ";
+                            } else {
+                                $ini[$type][] = "; $cfg = ";
+                            }
                         }
                     }
                     $ini[$type][] = "";
+
                 }
             }
         }
 
         // put INI sections base on priority to resulting INI
-        $priority = array('engine', '_cmds', 'filter', 'output', 'storage', 'compare');
+        $priority = array(
+            'suggested' => 'listed options are more often changed then other - see description later in this file',
+            'engine' => "core engine configuration",
+            'filter' => 'definition of filter(s)',
+            'output' => 'configuration of output driver(s)',
+            'storage' => 'definition of storage drivers',
+            'compare' => 'definition of compare driver(s)'
+        );
         $res = array();
-        foreach ($priority as $section) {
+        $res[] = "; xtbackup.php configuration file for version ".self::getVersion();
+        $res[] = "";
+        foreach ($priority as $section=>$description) {
             if (isset($ini[$section])) {
+                $res[] = ";".str_repeat("*", strlen($description)+2);
+                $res[] = "; $description";
+                $res[] = "";
                 $res[] = implode(PHP_EOL, $ini[$section]);
             }
         }
@@ -628,12 +652,14 @@ class Core_Engine
         !isset($options[CfgPart::DESCRIPTIONS]) && $options[CfgPart::DESCRIPTIONS] = array();
         !isset($options[CfgPart::REQUIRED]) && $options[CfgPart::REQUIRED] = array();
         !isset($options[CfgPart::HINTS]) && $options[CfgPart::HINTS] = array();
+        !isset($options[CfgPart::SUGGESTED]) && $options[CfgPart::SUGGESTED] = array();
 
         // build full list of options
         $keys = array_keys($options[CfgPart::DEFAULTS])
                 + array_keys($options[CfgPart::HINTS])
                 + array_keys($options[CfgPart::DESCRIPTIONS])
-                + array_keys($options[CfgPart::REQUIRED]);
+                + array_keys($options[CfgPart::REQUIRED])
+                + array_keys($options[CfgPart::SUGGESTED]);
 
         // define each parameter
         $params = array();
@@ -641,6 +667,7 @@ class Core_Engine
             $params[$key] = array(
                 CfgPart::DESCRIPTIONS=>isset($options[CfgPart::DESCRIPTIONS][$key]) ? $options[CfgPart::DESCRIPTIONS][$key] : null,
                 CfgPart::REQUIRED=>isset($options[CfgPart::REQUIRED][$key]) ? $options[CfgPart::REQUIRED][$key] : false,
+                CfgPart::SUGGESTED=>isset($options[CfgPart::SUGGESTED][$key]) ? $options[CfgPart::SUGGESTED][$key] : false,
             );
             // we have to left out default if it is not defined, to be able to detect that there is no default
             if (array_key_exists($key, $options[CfgPart::DEFAULTS])) {
@@ -738,7 +765,8 @@ Example:
 engine.extensions[] = ENGINE_DIR "/examples/plugins"
 TXT
             ),
-            CfgPart::REQUIRED => array('local'=>true, 'remote'=>true, 'compare'=>true)
+            CfgPart::REQUIRED => array('local'=>true, 'remote'=>true, 'compare'=>true),
+            CfgPart::SUGGESTED =>array('outputs'=>true),
         );
 
         if (is_null($part)) {

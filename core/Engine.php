@@ -467,12 +467,24 @@ class Core_Engine
 
         $orders = $this->_roles;
 
-        $this->_runPhase("init", $orders)
-        && $this->_runPhase("refreshLocal", $orders)
-        && $this->_runPhase("refreshRemote", $orders)
-        && $this->_runPhase("compare", $orders)
-        && $this->_runPhase("updateRemote", $orders)
-        && $this->_runPhase("shutdown", $orders);
+        try {
+            $this->_runPhase("init", $orders)
+            && $this->_runPhase("refreshLocal", $orders)
+            && $this->_runPhase("refreshRemote", $orders)
+            && $this->_runPhase("compare", $orders)
+            && $this->_runPhase("updateRemote", $orders)
+            && $this->_runPhase("shutdown", $orders);
+        } catch (Core_StopException $e) {
+            // error message
+            $this->_stopAt = $e;
+            self::$out->logError($e->getMessage());
+            return false;
+        } catch (Exception $e) {
+            $myE = new Core_StopException("", "engine init", null, Core_StopException::RETCODE_FOREIGN_EXCEPTION);
+            $myE->setException($e);
+            $this->_stopAt = $myE;
+            throw $e;
+        }
 
         return true;
     }

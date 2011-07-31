@@ -77,12 +77,21 @@ class Storage_S3 implements Storage_Interface
             $this->_out->stop("-- re-run without --");
         }
 
+        // test required
+        if (!isset($this->_options['key'], $this->_options['key']['access'])) {
+            throw new Core_StopException("You have to define S3 option key.access.", "S3Init");
+        }
+
+        if ($this->_options['key']['secret']) {
+            throw new Core_StopException("You have to define S3 option key.secret.", "S3Init");
+        }
+
         $job = $this->_out->jobStart("handshaking with Amazon S3");
         // TODO we need better AmazonS3 error handling
         $this->_s3 = new AmazonS3($this->_options['key']['access'], $this->_options['key']['secret']);
         if (false == $this->_s3->if_bucket_exists($this->getBucket())) {
             $this->_out->jobEnd($job, "failed");
-            $this->_out->stop("S3 bucket not found: '{$this->getBucket()}'");
+            throw new Core_StopException("S3 bucket not found: '{$this->getBucket()}'", "S3Init");
         }
         $this->_out->jobEnd($job, "authorized");
 

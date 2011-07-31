@@ -42,6 +42,7 @@ Configuration
 The controll programm `xtbackup.php` is provided to make backup task functionality available and it makes it possible to execute backup tasks.
 
 `xtbackup.php` by itself interprets following command line options:
+
 * --help : will output basic information how to use the programm
 * --init : generate documented INI skeleton
 * --quite-start : it is possible to suppress output to console in start phase of engine

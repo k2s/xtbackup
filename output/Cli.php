@@ -42,11 +42,14 @@ class Output_Cli extends Output_Blackhole
      */
     public function welcome()
     {
-        echo "***********************************\n";
-        echo "* xtBackup                        *\n";
-        echo "* sponsored by xtmotion.com, 2011 *\n";
-        echo "********************************* *\n";
-        echo "\n";
+        $ver = "* v".Core_Engine::getVersion();
+        $ver .= str_repeat(" ", 34-strlen($ver))."*";
+        fputs(STDOUT, "***********************************".PHP_EOL);
+        fputs(STDOUT, "* xtBackup                        *".PHP_EOL);
+        fputs(STDOUT, $ver.PHP_EOL);
+        fputs(STDOUT, "* sponsored by xtmotion.com, 2011 *".PHP_EOL);
+        fputs(STDOUT, "***********************************".PHP_EOL);
+        fputs(STDOUT, PHP_EOL);
     }
     /**
      * Last output
@@ -58,71 +61,98 @@ class Output_Cli extends Output_Blackhole
     public function finish($returnEx)
     {
         if (false===$returnEx) {
-            echo "done.\n";
+            fputs(STDOUT, "done.");
         } else {
-            echo "error.\n";
+            fputs(STDERR, "error.");
         }
     }
 
     public function showHelp($hint=false)
     {
         if ($hint) {
-            echo "\n$hint\n\n";
+            fputs(STDOUT, PHP_EOL."$hint".PHP_EOL.PHP_EOL);
+        }
+    }
+
+    /**
+     * Log message with priority
+     *
+     * @param int    $priority use Zend_Log priorities
+     * @param string $message  Message to log, multiple values supported
+     *
+     * @return void
+     * @throws Zend_Log_Exception
+     */
+    public function _log($priority, $message)
+    {
+        $args = func_get_args();
+        $priority = array_shift($args);
+
+        // check verbosity setting
+        if ($this->_verbosity<=$priority) {
+            return;
+        }
+
+        // build output string
+    	$msg = array_shift($args);
+        if (count($args)>0) {
+            $msg = vsprintf($msg, $args);
+        }
+
+        // decorate output
+        switch ($priority) {
+            case Output_Stack::WARNING:
+                $msg = "WARNING: ".$msg;
+                break;
+            case Output_Stack::ERROR:
+                $msg = "ERROR: ".$msg;
+                break;
+            case Output_Stack::CRITICAL:
+                $msg = "CRITICAL: ".$msg;
+                break;
+        }
+
+        // decide about output stream and process
+        if ($priority>=Output_Stack::WARNING) {
+            fputs(STDOUT, $msg.PHP_EOL);
+        } else {
+            fputs(STDERR, $msg.PHP_EOL);
         }
     }
 
     public function logDebug()
     {
-        if ($this->_verbosity<=Output_Stack::DEBUG) {
-            return;
-        }
-
-    	$params = func_get_args();
-    	$msg = array_shift($params);
-        if (count($params)>0) {
-            $msg = vsprintf($msg, $params);
-        }
-        echo "# $msg\n";
+        $args = func_get_args();
+        array_unshift($args, Output_Stack::DEBUG);
+        call_user_func_array(array($this, '_log'), $args);
     }
 
     public function logError()
     {
-    	$params = func_get_args();
-    	$msg = array_shift($params);
-        if (count($params)>0) {
-            $msg = vsprintf($msg, $params);
-        }
-        echo "ERROR: $msg\n";
+        $args = func_get_args();
+        array_unshift($args, Output_Stack::ERROR);
+        call_user_func_array(array($this, '_log'), $args);
     }
 
     public function logCritical()
     {
-    	$params = func_get_args();
-    	$msg = array_shift($params);
-        if (count($params)>0) {
-            $msg = vsprintf($msg, $params);
-        }
-        echo "CRITICAL: $msg\n";
+        $args = func_get_args();
+        array_unshift($args, Output_Stack::CRITICAL);
+        call_user_func_array(array($this, '_log'), $args);
     }
 
     public function logNotice()
     {
-    	$params = func_get_args();
-    	$msg = array_shift($params);
-        if (count($params)>0) {
-            $msg = vsprintf($msg, $params);
-        }
-        echo "$msg\n";
+        $args = func_get_args();
+        array_unshift($args, Output_Stack::NOTICE);
+        call_user_func_array(array($this, '_log'), $args);
     }
 
     public function logWarning()
     {
-    	$params = func_get_args();
-    	$msg = array_shift($params);
-        if (count($params)>0) {
-            $msg = vsprintf($msg, $params);
-        }
-        echo "WARNING: $msg\n";
+        $args = func_get_args();
+        array_unshift($args, Output_Stack::WARNING);
+        call_user_func_array(array($this, '_log'), $args);
     }
 
     /**
@@ -135,6 +165,7 @@ class Output_Cli extends Output_Blackhole
      */
     public function jobStart($msg, $params=array())
     {
+        // TODO has to exists in Output_Stack and maintain jobId
     	$params = func_get_args();
 
         // init new job
@@ -145,7 +176,7 @@ class Output_Cli extends Output_Blackhole
         if (count($params)>0) {
             $msg = vsprintf($msg, $params);
         }
-        echo "(job $job) start: ".$msg."\n";
+        fputs(STDOUT, "(job $job) start: ".$msg.PHP_EOL);
 
         return $job;
     }
@@ -176,13 +207,13 @@ class Output_Cli extends Output_Blackhole
         if ($count) {
             if ($count % $step != 0) {
                 // output dot for not completed batch
-                echo ".";
+                fputs(STDOUT, ".");
             }
-            echo "\n";
+            fputs(STDOUT, PHP_EOL);
         }
 
         // show messsage
-        echo "(job $job) end: ".$msg."\n";
+        fputs(STDOUT, "(job $job) end: ".$msg.PHP_EOL);
 
         // remove this job from stack
         unset($this->_jobs[$job]);
@@ -195,7 +226,7 @@ class Output_Cli extends Output_Blackhole
         $count++;
         if ($count % $step == 0) {
             // mostly we don't want to show progress on each step
-            echo ".";
+            fputs(STDOUT, ".");
         }
     }
 
@@ -206,6 +237,7 @@ class Output_Cli extends Output_Blackhole
     
     public function mark()
     {
+        // TODO remove or implement elsewhere (Output_Stack ?)
         $mtime = microtime(); 
         $mtime = explode(" ",$mtime); 
         $mtime = $mtime[1] + $mtime[0]; 
@@ -214,6 +246,7 @@ class Output_Cli extends Output_Blackhole
     
     public function time()
     {
+        // TODO remove or implement elsewhere (Output_Stack ?)
         $mtime = microtime(); 
         $mtime = explode(" ",$mtime); 
         $mtime = $mtime[1] + $mtime[0]; 

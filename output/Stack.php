@@ -11,8 +11,6 @@
  * @method logCritical()
  * @method finish($returnEx)
  * @method showHelp()
- * @method mark()
- * @method time()
  * @method jobStart()
  * @method jobEnd()
  * @method jobStep()

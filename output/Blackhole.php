@@ -20,22 +20,41 @@ class Output_Blackhole implements Output_Interface
 
     public function init()
     {
-        
+
     }
+
     public function welcome()
     {
 
     }
+
     public function finish($returnEx)
     {
 
     }
+
     public function logDebug()
     {
-        
     }
 
     public function logCritical()
+    {
+    }
+
+    public function logNotice()
+    {
+    }
+
+    public function logWarning()
+    {
+    }
+
+    public function logError()
+    {
+
+    }
+
+    public function showHelp()
     {
 
     }
@@ -48,7 +67,7 @@ class Output_Blackhole implements Output_Interface
      *
      * @return int
      */
-    public function jobStart($msg, $params=array())
+    public function jobStart($msg, $params = array())
     {
 
     }
@@ -62,7 +81,7 @@ class Output_Blackhole implements Output_Interface
      *
      * @return void
      */
-    public function jobEnd($job, $msg, $params=array())
+    public function jobEnd($job, $msg, $params = array())
     {
 
     }
@@ -76,18 +95,20 @@ class Output_Blackhole implements Output_Interface
     {
 
     }
+
     public function jobStep($job)
     {
 
     }
+
     public function mark()
     {
-        
+
     }
-    
+
     public function time()
     {
-        
+
     }
 
     static public function getConfigOptions($part = null)

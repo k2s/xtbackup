@@ -1,6 +1,7 @@
 <?php
 interface Output_Interface
 {
+    function log($priority, $message);
     function logDebug();
     function logNotice();
     function logWarning();

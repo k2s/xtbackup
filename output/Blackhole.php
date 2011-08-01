@@ -33,6 +33,11 @@ class Output_Blackhole implements Output_Interface
 
     }
 
+    function log($priority, $message)
+    {
+
+    }
+
     public function logDebug()
     {
     }

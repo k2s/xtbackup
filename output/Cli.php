@@ -83,7 +83,7 @@ class Output_Cli extends Output_Blackhole
      * @return void
      * @throws Zend_Log_Exception
      */
-    public function _log($priority, $message)
+    public function log($priority, $message)
     {
         $args = func_get_args();
         $priority = array_shift($args);
@@ -124,35 +124,35 @@ class Output_Cli extends Output_Blackhole
     {
         $args = func_get_args();
         array_unshift($args, Output_Stack::DEBUG);
-        call_user_func_array(array($this, '_log'), $args);
+        call_user_func_array(array($this, 'log'), $args);
     }
 
     public function logError()
     {
         $args = func_get_args();
         array_unshift($args, Output_Stack::ERROR);
-        call_user_func_array(array($this, '_log'), $args);
+        call_user_func_array(array($this, 'log'), $args);
     }
 
     public function logCritical()
     {
         $args = func_get_args();
         array_unshift($args, Output_Stack::CRITICAL);
-        call_user_func_array(array($this, '_log'), $args);
+        call_user_func_array(array($this, 'log'), $args);
     }
 
     public function logNotice()
     {
         $args = func_get_args();
         array_unshift($args, Output_Stack::NOTICE);
-        call_user_func_array(array($this, '_log'), $args);
+        call_user_func_array(array($this, 'log'), $args);
     }
 
     public function logWarning()
     {
         $args = func_get_args();
         array_unshift($args, Output_Stack::WARNING);
-        call_user_func_array(array($this, '_log'), $args);
+        call_user_func_array(array($this, 'log'), $args);
     }
 
     /**

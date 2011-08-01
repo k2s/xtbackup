@@ -82,7 +82,7 @@ class Storage_S3 implements Storage_Interface
             throw new Core_StopException("You have to define S3 option key.access.", "S3Init");
         }
 
-        if ($this->_options['key']['secret']) {
+        if (!isset($this->_options['key']['secret'])) {
             throw new Core_StopException("You have to define S3 option key.secret.", "S3Init");
         }
 

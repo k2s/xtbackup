@@ -300,7 +300,7 @@ class Storage_Filesystem implements Storage_Interface
         if (is_null($part)) {
             return $opt;
         } else {
-            return $opt[$part];
+            return array_key_exists($part, $opt) ? $opt[$part] : array();
         }
     }
 /*

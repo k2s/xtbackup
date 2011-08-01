@@ -73,15 +73,14 @@ class Compare_Sqlite implements Compare_Interface, Iterator
     public function  __construct($engine, $output, $options)
     {
         // merge options with default options
-        $options = $engine::array_merge_recursive_distinct(self::getConfigOptions(CfgPart::DEFAULTS), $options);
+        Core_Engine::array_merge_defaults(
+            $options,
+            self::getConfigOptions(CfgPart::DEFAULTS),
+            self::getConfigOptions(CfgPart::HINTS)
+        );
 
-        // TODO check that sqlite 3 is installed
-        // TODO merge with default options (all keys in $_options have to exists)
         $options['prefix'] = false;
         //$options['keep'] = false;
-        // TODO check mandatory options
-        // TODO complain about not allowed options
-        // TODO $options['prefix'] can't start with _ it would interfear with testing mode
         $this->_out = $output;
         $this->_options = $options;
         $this->_engine = $engine;
@@ -101,6 +100,11 @@ class Compare_Sqlite implements Compare_Interface, Iterator
             $this->_prefix = $this->_engine->getUniqueKey();
         }
         $this->_out->logDebug("we will use table name prefix: '$this->_prefix'");
+
+        // TODO check that sqlite 3 is installed
+        // TODO check mandatory options
+        // TODO complain about not allowed options
+        // TODO $options['prefix'] can't start with _ it would interfear with testing mode
 
         if ($this->_testing) {
             // TODO maybe using transaction ROLLBACK in shutdown is better

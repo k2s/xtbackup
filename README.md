@@ -15,6 +15,15 @@ Requirements
   * with SQLite support
 * current implementation of the PHP-AWS library doesn't support files over 2GB on 32bit architecture
 
+Features
+--------
+
+* designed as PHP library
+* ready to be used as command line tool (xtbackup.php tool)
+* extendable with PHP code
+* configurable with single/multiple INI file(s) and command line options
+* ...
+
 Installation
 ------------
 

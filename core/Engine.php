@@ -789,9 +789,8 @@ engine.extensions[] = ENGINE_DIR "/examples/plugins"
 TXT
             ,
             'nice' => <<<TXT
-Set process priority.
-
-Doesn't work on Windows. See PHP/proc_nice for more info.
+Set process priority. Doesn't work on Windows.
+See PHP/proc_nice and `man nice` for more info.
 TXT
 
             ),

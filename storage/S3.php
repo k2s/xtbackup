@@ -46,16 +46,13 @@ class Storage_S3 implements Storage_Interface
     public function  __construct($engine, $output, $options)
     {
         // merge options with default options
-        $options = $engine::array_merge_recursive_distinct(self::getConfigOptions(CfgPart::DEFAULTS), $options);
+        Core_Engine::array_merge_defaults(
+            $options,
+            self::getConfigOptions(CfgPart::DEFAULTS),
+            self::getConfigOptions(CfgPart::HINTS)
+        );
 
         // TODO see Compare_Sqlite constructor
-
-        /*if ($this->_params['upload']['part-size'] < 5  ||  $this->_params['upload']['part-size'] > 5120) {
-            XtS3Backup_Core::suicide(
-                "Amazon S3 part size limit from 5MiB to 5GiB. "
-                ."remote.s3.upload.part-size key defined in MiB and expected to be between 5 and 5120"
-            );
-        }        */
 
         $this->_out = $output;
         $this->_options = $options;
@@ -70,14 +67,14 @@ class Storage_S3 implements Storage_Interface
         // Amazon library SSL Connection Issues
         define('AWS_CERTIFICATE_AUTHORITY', $this->_options['certificate_authority']);
 
-        if ($this->_options['compatibilityTest']) {
+        if ($this->_options['compatibility-test']) {
             // see lib/AWSSDKforPHP/_compatibility_test
             $this->_out->jobStart("executing Amazon SDK compatibility test");
             include "lib/AWSSDKforPHP/_compatibility_test/sdk_compatibility_test_cli.php";
             $this->_out->stop("-- re-run without --");
         }
 
-        // test required
+        // test parameters
         if (!isset($this->_options['key'], $this->_options['key']['access'])) {
             throw new Core_StopException("You have to define S3 option key.access.", "S3Init");
         }
@@ -85,6 +82,13 @@ class Storage_S3 implements Storage_Interface
         if (!isset($this->_options['key']['secret'])) {
             throw new Core_StopException("You have to define S3 option key.secret.", "S3Init");
         }
+        if (!is_null($this->_options['multipart']['part-size']) && ($this->_options['multipart']['part-size'] < 5  ||  $this->_options['multipart']['part-size'] > 5120)) {
+            throw new Core_StopException(
+                "multipart.part-size has to be in range from 5MB to 500MB. It is Amazon S3 restriction. Current value is {$this->_options['multipart']['part-size']}MB.",
+                "S3Init"
+            );
+        }
+
 
         $job = $this->_out->jobStart("handshaking with Amazon S3");
         // TODO we need better AmazonS3 error handling
@@ -318,13 +322,18 @@ class Storage_S3 implements Storage_Interface
                                     )
                                 );
                             } else {
-                                $this->_s3->create_object(
-                                    $this->getBucket(), $path,
-                                    array(
-                                         'fileUpload' => $uploadPath,
-                                         'meta' => array('localts' => $task->ltime),
-                                    )
-                                );
+                                $options = array('fileUpload' => $uploadPath);
+                                // TODO it should be possible to speedup upload of small upload but using S3 batch
+                                if ($this->_options['multipart']['big-files']) {
+                                    // multipart upload for big files
+                                    if ($this->_options['multipart']['part-size']) {
+                                        $options['partSize'] = $this->_options['multipart']['part-size'];
+                                    }
+                                    $this->_s3->create_mpu_object($this->getBucket(), $path, $options);
+                                } else {
+                                    // normal upload
+                                    $this->_s3->create_object($this->getBucket(), $path, $options);
+                                }
                             }
                         }
                         break;
@@ -389,12 +398,13 @@ class Storage_S3 implements Storage_Interface
         $opt = array(
             CfgPart::DEFAULTS => array(
                 'certificate_authority' => true,
-                //'bucket'=>,
                 'refresh' => false,
                 'update' => false,
-                'compatibilityTest' => false,
-                //'key.access'=>,
-                //'key.secret'=>,
+                'compatibility-test' => false,
+                'multipart' => array(
+                    'big-files' => true,
+                    'part-size' => null,
+                ),
             ),
             CfgPart::DESCRIPTIONS => array(
                 'certificate_authority' => 'see https://forums.aws.amazon.com/ann.jspa?annID=1005',
@@ -408,8 +418,8 @@ should upload/remove of data be executed ? (yes/no/simulate)
   simulate: will output progress, but will not really transfer data
 TXT
                 ,
-                'compatibilityTest' => <<<TXT
-Find out if yur PC is compatible with Amazon PHP SDK, it will always stop the application if enabled
+                'compatibility-test' => <<<TXT
+Find out if yur PC is compatible with Amazon PHP SDK, it will always stop the application if enabled.
 TXT
                 ,
 
@@ -423,6 +433,15 @@ S3 authentification key
 Best practice is to place this option into separate INI file readable only by user executing backup.
 TXT
                 ,
+                'multipart.big-files' => <<<TXT
+TRUE/FALSE enable multipart upload of big files. It speeds up upload.
+TXT
+                ,
+                'multipart.part-size' => <<<TXT
+The size of an individual part. The size may not be smaller than 5 MB or larger than 500 MB. The default value is 50 MB.
+TXT
+                ,
+
             ),
             CfgPart::REQUIRED => array('bucket'=>true, 'key.access'=>true, 'key.secret'=>true)
         );
@@ -430,7 +449,7 @@ TXT
         if (is_null($part)) {
             return $opt;
         } else {
-            return $opt[$part];
+            return array_key_exists($part, $opt) ? $opt[$part] : array();
         }
     }
 

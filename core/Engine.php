@@ -61,7 +61,14 @@ class Core_Engine
      * @var array
      */
     protected $_roles = array();
-
+    /**
+     * Is running OS Windows ?
+     *
+     * @see isWindows()
+     *
+     * @var bool
+     */
+    protected static $_isWindows;
     /**
      * @TODO Idea is to be able to store different backups in same compare DB
      *
@@ -89,6 +96,9 @@ class Core_Engine
      */
     public function __construct($cmdArguments = array(), $output = null)
     {
+        // detect if OS is Windows
+        self::$_isWindows = (strpos(strtolower(php_uname('s')), 'win') !== false);
+
         // we need to have at least output class as soon as possible
         require_once 'output/Interface.php';
         require_once 'output/Stack.php';
@@ -369,6 +379,12 @@ class Core_Engine
 
             // configure output
             $this->_configureOutput();
+
+            // engine.nice
+            if (!self::isWindows() && false!==$this->_options['engine']['nice']) {
+                self::$out->logNotice("changing process priority, nice=".$this->_options['engine']['nice']);
+                proc_nice($this->_options['engine']['nice']);
+            }
 
             // configure compare driver
             $this->_configureCompare();
@@ -704,6 +720,11 @@ class Core_Engine
         return self::$_version;
     }
 
+    static public function isWindows()
+    {
+        return self::$_isWindows;
+    }
+
     /**
      * Obtain information about current git checkout
      *
@@ -730,6 +751,7 @@ class Core_Engine
             CfgPart::DEFAULTS => array(
                 'extensions' => array(),
                 'outputs' => array('cli'),
+                'nice' => false,
             ),
             CfgPart::DESCRIPTIONS => array(
                 'outputs' => <<<TXT
@@ -765,6 +787,13 @@ It is possible to use ENGINE_DIR constant in INI, which points to parent folder 
 Example:
 engine.extensions[] = ENGINE_DIR "/examples/plugins"
 TXT
+            ,
+            'nice' => <<<TXT
+Set process priority.
+
+Doesn't work on Windows. See PHP/proc_nice for more info.
+TXT
+
             ),
             CfgPart::REQUIRED => array('local'=>true, 'remote'=>true, 'compare'=>true),
             CfgPart::SUGGESTED =>array('outputs'=>true),

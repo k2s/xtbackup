@@ -263,6 +263,9 @@ class Core_Engine
 
     public static function array_merge_defaults(&$options, $defaults, $hints)
     {
+        if (!is_array($options)) {
+            $options = array();
+        }
         foreach ($defaults as $key=>$val) {
             if (array_key_exists($key, $options)) {
                 if (is_array($val)) {

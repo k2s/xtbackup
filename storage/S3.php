@@ -12,6 +12,11 @@ class Storage_S3 implements Storage_Interface
      */
     protected $_s3;
     /**
+     * Keep information if versioning is enabled on S3 bucket
+     * @var bool
+     */
+    protected $_versioningEnabled;
+    /**
      *
      * @var Core_Engine
      */
@@ -98,6 +103,20 @@ class Storage_S3 implements Storage_Interface
             throw new Core_StopException("S3 bucket not found: '{$this->getBucket()}'", "S3Init");
         }
         $this->_out->jobEnd($job, "authorized");
+
+        // find out if versioning is enabled
+        $versioning = $this->_s3->get_versioning_status($this->getBucket());
+        if (!$versioning->isOK()) {
+            throw new Core_StopException("Not possible to get versioning status of S3 bucket.", "S3Init");
+        }
+        $this->_versioningEnabled = $versioning->body->Status=="Enabled";
+        if (!$this->_versioningEnabled) {
+            $priority = $this->_options['warn-versioning'] ? Output_Stack::WARNING : Output_Stack::DEBUG;
+            $this->_out->log(
+                $priority,
+                "Versioning not enabled for this S3 bucket, you will not be able to restore older versions of files."
+            );
+        }
 
         return true;
     }
@@ -401,6 +420,7 @@ class Storage_S3 implements Storage_Interface
                 'refresh' => false,
                 'update' => false,
                 'compatibility-test' => false,
+                'warn-versioning' => true,
                 'multipart' => array(
                     'big-files' => true,
                     'part-size' => null,
@@ -441,6 +461,11 @@ TXT
 The size of an individual part. The size may not be smaller than 5 MB or larger than 500 MB. The default value is 50 MB.
 TXT
                 ,
+                'warn-versioning' => <<<TXT
+If S3 bucket versioning is disabled you will not be able to restore older versions of files.
+FALSE will suppress warnings in case that it is disabled.
+TXT
+
 
             ),
             CfgPart::REQUIRED => array('bucket'=>true, 'key.access'=>true, 'key.secret'=>true)

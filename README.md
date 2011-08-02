@@ -22,9 +22,10 @@ Features
 * designed as re-usable PHP code library
 * configurable with single/multiple INI file(s) and command line options
 * efficient compare algorithm
-  * sqlite3 implementation
+  * works with huge amount of files
   * minimize traffic and CPU
   * use time and md5 for change detection
+  * sqlite3 implementation
 * backup from Linux/Windows file system
   * support for UTF8 file names
   * support for case-sensitive file names

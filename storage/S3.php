@@ -75,6 +75,8 @@ class Storage_S3 implements Storage_Interface
         if ($this->_options['compatibility-test']) {
             // see lib/AWSSDKforPHP/_compatibility_test
             $this->_out->jobStart("executing Amazon SDK compatibility test");
+            // their code shows notices
+            error_reporting(E_ALL & ~E_NOTICE);
             include "lib/AWSSDKforPHP/_compatibility_test/sdk_compatibility_test_cli.php";
             $this->_out->stop("-- re-run without --");
         }

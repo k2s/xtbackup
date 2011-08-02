@@ -18,11 +18,28 @@ Requirements
 Features
 --------
 
-* designed as PHP library
-* ready to be used as command line tool (xtbackup.php tool)
-* extendable with PHP code
+* ready to be used as command line tool (provided by xtbackup.php tool)
+* designed as re-usable PHP code library
 * configurable with single/multiple INI file(s) and command line options
-* ...
+* efficient compare algorithm
+  * sqlite3 implementation
+  * minimize traffic and CPU
+  * use time and md5 for change detection
+* backup from Linux/Windows file system
+  * support for UTF8 file names
+  * support for case-sensitive file names
+  * symlink handling
+* backup to Amazon S3 storage
+  * multi-part uploads
+  * multiple backups into the same bucket
+* configurable independent output drivers
+  * output to console
+  * log into sqlite database
+* extendable with PHP code
+  * file filters
+  * new storage drivers
+  * backup preparation processes (DB, subversion, etc.)
+  * improved compare algorithm
 
 Installation
 ------------

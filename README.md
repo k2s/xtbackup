@@ -20,6 +20,7 @@ Features
 
 * ready to be used as command line tool (provided by xtbackup.php tool)
 * no installation needed, works everywhere where PHP 5.3 and above is installed
+  * [DreamHost](http://www.dreamhost.com/) tested
 * designed as re-usable PHP code library
 * configurable with single/multiple INI file(s) and command line options
 * efficient compare algorithm

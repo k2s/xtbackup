@@ -11,7 +11,7 @@ The Authors will not be responsible for any damage users may suffer, including b
 Requirements
 ------------
 
-* PHP5
+* PHP 5.3 and above
   * with SQLite support
 * current implementation of the PHP-AWS library doesn't support files over 2GB on 32bit architecture
 
@@ -19,6 +19,7 @@ Features
 --------
 
 * ready to be used as command line tool (provided by xtbackup.php tool)
+* no installation needed, works everywhere where PHP 5.3 and above is installed
 * designed as re-usable PHP code library
 * configurable with single/multiple INI file(s) and command line options
 * efficient compare algorithm

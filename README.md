@@ -31,7 +31,7 @@ Features
   * support for case-sensitive file names
   * symlink handling
 * backup to Amazon S3 storage
-  * multi-part uploads
+  * parallel upload multiple parts of huge files
   * multiple backups into the same bucket
 * configurable independent output drivers
   * output to console

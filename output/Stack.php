@@ -77,7 +77,29 @@ class Output_Stack
         }
     }
 
+    /**
+     * Map verbosity text to numeric constant
+     *
+     * @static
+     * @param string $text to map to contant
+     * @return int return $default if not possible to convert
+     */
+    public static function verbosityToConst($text, $default=false)
+    {
+        if (is_numeric($text)) {
+            // supports also numeric values
+            return intval($text);
+        }
 
+        // map text to integer constant
+        $text = strtoupper(trim($text));
+        $constName = "self::$text";
+        if (defined($constName)) {
+            return constant($constName);
+        } else {
+            return $default;
+        }
+    }
 
     // TODO handle job*() methods
 }

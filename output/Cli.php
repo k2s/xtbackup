@@ -30,7 +30,13 @@ class Output_Cli extends Output_Blackhole
 
         // remember configuration options
         $this->_options = $options;
-        $this->_verbosity = $options['verbosity']; // make copy for faster access
+        $this->_verbosity = Output_Stack::verbosityToConst($options['verbosity']); // make copy for faster access
+        if (false===$this->_verbosity) {
+            throw new Core_StopException(
+                "Value of option verbosity is '{$options['verbosity']}' which is not allowed.",
+                "cliConstruct"
+            );
+        }
 
         // make sure that all output is directly sent to console
         ob_implicit_flush();
@@ -61,9 +67,9 @@ class Output_Cli extends Output_Blackhole
     public function finish($returnEx)
     {
         if (false===$returnEx) {
-            fputs(STDOUT, "done.");
+            fputs(STDOUT, "done.".PHP_EOL);
         } else {
-            fputs(STDERR, "error.");
+            fputs(STDERR, "error.".PHP_EOL);
         }
     }
 
@@ -258,12 +264,16 @@ class Output_Cli extends Output_Blackhole
     {
         $opt = array(
             CfgPart::DEFAULTS=>array(
-                'verbosity'=>Output_Stack::DEBUG,
+                'verbosity'=>'debug',
                 'progress'=>true,
             ),
             CfgPart::DESCRIPTIONS=>array(
-                'verbosity'=>'.....',
-                'progress'=>"should progress be shown ?",
+                'verbosity'=><<<TXT
+What level of information do you want to see in output.
+Possible values: CRITICAL, ERROR, WARNING, NOTICE, DEBUG',
+TXT
+                ,
+                'progress'=>"Should progress be visually presented in output.",
             ),
             CfgPart::REQUIRED=>array()
         );

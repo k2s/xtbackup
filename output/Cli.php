@@ -89,7 +89,7 @@ class Output_Cli extends Output_Blackhole
         $priority = array_shift($args);
 
         // check verbosity setting
-        if ($this->_verbosity<=$priority) {
+        if ($this->_verbosity<$priority) {
             return;
         }
 

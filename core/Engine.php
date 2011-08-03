@@ -288,10 +288,8 @@ class Core_Engine
 
     protected function _configureOutput()
     {
-        // remove default output driver
-        self::$out->outputRemove();
-
-        // add configured outputs
+        // construct configured outputs
+        $outputs = array();
         if (isset($this->_options['engine']['outputs'])) {
             if (!is_array($this->_options['engine']['outputs'])) {
                 // correct user mistake in configuration
@@ -303,8 +301,14 @@ class Core_Engine
                         : array();
                 $class = array_key_exists('class', $params) ? $params['class'] : $keyName;
                 $class = "Output_" . ucfirst($class);
-                self::$out->outputAdd(new $class($params));
+                $outputs[] = new $class($params);
             }
+        }
+
+        // replace current output
+        self::$out->outputRemove();
+        foreach ($outputs as $output) {
+            self::$out->outputAdd($output);
         }
 
         // first output

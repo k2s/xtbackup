@@ -309,7 +309,7 @@ class Storage_S3 implements Storage_Interface
                 switch ($task->action)
                 {
                     case Compare_Interface::CMD_MKDIR:
-                        $this->_out->logDebug("mkdir " . $path . " in s3 bucket");
+                        $this->_out->logDebug("mkdir " . $path . " into s3 bucket");
                         if (!$simulate) {
                             // create folders
                             $this->_s3->create_object(
@@ -321,7 +321,7 @@ class Storage_S3 implements Storage_Interface
                         }
                         break;
                     case Compare_Interface::CMD_PUT:
-                        $this->_out->logDebug("put " . $path . " in s3 bucket");
+                        $this->_out->logDebug("put " . $path . " into s3 bucket");
                         $uploadPath = $local->getBaseDir() . $task->path;
 
                         //fix for windows encoding issue
@@ -368,7 +368,7 @@ class Storage_S3 implements Storage_Interface
                         break;
                     case Compare_Interface::CMD_TS:
                         // storing this information as metadata is too slow to be used
-//                        $this->_out->logDebug("remember local timestamp for " . $path . " in s3 bucket");
+//                        $this->_out->logDebug("remember local timestamp for " . $path . " into s3 bucket");
 //                        if (!$simulate) {
 //                            $this->_s3->update_object(
 //                                $this->getBucket(), $path,

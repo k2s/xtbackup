@@ -298,8 +298,8 @@ class Core_Engine
                 $this->_options['engine']['outputs'] = array($this->_options['engine']['outputs']);
             }
             foreach ($this->_options['engine']['outputs'] as $keyName) {
-                $params = array_key_exists('outputs', $this->_options) && array_key_exists($keyName, $this->_options['outputs'])
-                        ? $this->_options['outputs'][$keyName]
+                $params = array_key_exists('output', $this->_options) && array_key_exists($keyName, $this->_options['output'])
+                        ? $this->_options['output'][$keyName]
                         : array();
                 $class = array_key_exists('class', $params) ? $params['class'] : $keyName;
                 $class = "Output_" . ucfirst($class);

@@ -134,7 +134,7 @@ Credits
 xtBackup uses following libraries:
 
 * [SQLite](http://www.sqlite.org/)
-* [PHP-AWS library](http://github.com/tylerhall/php-aws/)
+* [AWS SDK for PHP](https://github.com/amazonwebservices/aws-sdk-for-php)
 
 License
 -------

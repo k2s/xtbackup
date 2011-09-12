@@ -1,6 +1,7 @@
 <?php
 require_once "core/StopException.php";
 require_once "core/CfgPart.php";
+require_once "core/Lock.php";
 
 // may be used in INI
 !defined('ENGINE_DIR') && define("ENGINE_DIR", realpath(__DIR__ . '/../') . '/');
@@ -379,9 +380,16 @@ class Core_Engine
 
     public function init()
     {
+        $this->_lock = new Core_Lock($this->_options, self::$out);
         try {
             if (!isset($this->_options['engine'])) {
                 throw new Core_StopException("You have to configure `engine`.", "init");
+            }
+            
+            //internally return isLocked();
+            if ($this->_lock->lock()) {
+                self::$out->logNotice(">>>>SHOULD WAIT");
+                $this->_lock->wait();
             }
 
             // configure output
@@ -508,7 +516,7 @@ class Core_Engine
             $this->_stopAt = $myE;
             throw $e;
         }
-
+        $this->_lock->unlock();
         return true;
     }
 

@@ -9,7 +9,7 @@ require_once "core/Lock.php";
 class Core_Engine
 {
     /**
-     * Major and minor version should be set here.
+     * Major and minor version should be set here. 
      * If revision number is question mark getVersion() will try to determine it from git.
      */
     const VERSION = "0.1.?";

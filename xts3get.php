@@ -24,6 +24,7 @@ class Xts3get
     
     public function __construct($argv) 
     {
+        define('AWS_CERTIFICATE_AUTHORITY', true);
         $this->_prepareParams($argv);
         $this->_s3 = new AmazonS3($this->_options['access'], $this->_options['secret']);
         $this->_out(">>> Params initialised. Amazon s3 object created");
@@ -143,6 +144,9 @@ class Xts3get
                 }
                 
             }
+            // move to next batch of files
+            $marker = $v->Key;
+            $firstBatch = false;
         } while((string) $list->body->IsTruncated == 'true');
         
         $this->_out("All listed files: $itemCount");

@@ -22,7 +22,7 @@ class Core_Lock
     
     protected $_iniMd5;
     
-    protected $_savedMd5;
+    protected $_savedMd5 = array();
     
     protected $_locked = false;
     /**
@@ -95,9 +95,10 @@ class Core_Lock
                 $this->_output->logNotice($this->_iniMd5);
                 var_dump($this->_savedMd5);
                 
-                if (empty($this->_savedMd5)|| (!empty($this->_savedMd5) && $this->_iniMd5 == $this->_savedMd5)) {
+                if (empty($this->_savedMd5)|| (!empty($this->_savedMd5) && in_array($this->_iniMd5, $this->_savedMd5))) {
                     ftruncate($this->_file, 0);
-                    fwrite($this->_file, $this->_iniMd5);
+                    $this->_savedMd5[] = $this->_iniMd5;
+                    fwrite($this->_file, implode(",", $this->_savedMd5));
                     fflush($this->_file);
                     $this->_lock($this->_file);
                 } else {
@@ -162,7 +163,9 @@ class Core_Lock
     
     protected function _getSavedMd5()
     {
-        return fread($this->_file, 4096);
+        $str = fread($this->_file, 4096);
+        (!empty($str)) ? $arr = explode(",", $str) : $arr = array();
+        return $arr;
     }
     
     public function test() {

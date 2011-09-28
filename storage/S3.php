@@ -25,6 +25,8 @@ class Storage_S3 implements Storage_Interface
      * @var Output_Stack
      */
     protected $_out;
+    
+    protected $_defaultRedundancyStorage = AmazonS3::STORAGE_STANDARD;
     /**
      *
      * @var array
@@ -123,7 +125,9 @@ class Storage_S3 implements Storage_Interface
                 "Versioning not enabled for this S3 bucket, you will not be able to restore older versions of files."
             );
         }
-
+        if (is_string($this->_options['defaultRedundancyStorage'])) {
+            $this->_defaultRedundancyStorage = constant($this->_options['defaultRedundancyStorage']);
+        }
         return true;
     }
 
@@ -161,8 +165,8 @@ class Storage_S3 implements Storage_Interface
             $this->_out->logNotice("update requested by user");
         }
         
-        //this probably temporary place for it
-        $this->changeRedundancy();
+        //we do not suppose to enable this functionality
+        //$this->changeRedundancy();
 
         $job = $this->_out->jobStart("downloading info about files stored in Amazon S3");
         $this->_out->jobSetProgressStep($job, 100);
@@ -344,6 +348,7 @@ class Storage_S3 implements Storage_Interface
                                 $this->getBucket(), $path,
                                 array(
                                      'body' => '',
+                                     'storage' => $this->_defaultRedundancyStorage
                                 )
                             );
                         }
@@ -368,10 +373,11 @@ class Storage_S3 implements Storage_Interface
                                     $this->getBucket(), $path,
                                     array(
                                          'body' => '',
+                                         'storage' => $this->_defaultRedundancyStorage
                                     )
                                 );
                             } else {
-                                $options = array('fileUpload' => $uploadPath);
+                                $options = array('fileUpload' => $uploadPath, 'storage' => $this->_defaultRedundancyStorage);
                                 // TODO it should be possible to speedup upload of small upload but using S3 batch
                                 if ($this->_options['multipart']['big-files']) {
                                     // multipart upload for big files
@@ -520,7 +526,10 @@ TXT
         return $path;
     }
     
-    public function changeRedundancy()
+    /*
+     * We do not suppose to enable the functionality
+     * 
+     * public function changeRedundancy()
     {
         if (isset($this->_options['redundancy']['change']) 
                 && $this->_options['redundancy']['change']) {
@@ -559,7 +568,7 @@ TXT
                 $params['type']);
         
         $this->_out->logNotice("redundancy storage changed for: $filename");
-    }
+    }*/
     
     public function setBasedir($value)
     {

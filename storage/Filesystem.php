@@ -11,6 +11,12 @@ class Storage_Filesystem implements Storage_Interface
      */
     protected $_out;
     /**
+     * Identification of the object, it is the key from INI file
+     *
+     * @var string
+     */
+    protected $_identity;
+    /**
      *
      * @var array
      */
@@ -43,15 +49,19 @@ class Storage_Filesystem implements Storage_Interface
      *
      * @return \Storage_Filesystem
      */
-    public function  __construct($engine, $output, $options)
+    public function  __construct($identity, $engine, $output, $options)
     {
         // merge options with default options
         $options = $engine::array_merge_recursive_distinct(self::getConfigOptions(CfgPart::DEFAULTS), $options);
 
+        $this->_identity = $identity;
         $this->_out = $output;
         $this->_options = $options;
         $this->_engine = $engine;
-        $this->_baseDir = $this->_options['basedir']; // for faster access
+        if (!array_key_exists('basedir', $this->_options)) {
+            $this->_out->stop("parameter 'baseDir' is required by driver '{$this->_identity}'");
+        }
+        $this->_baseDir = $this->_options['basedir']; // store for faster access
         $this->_baseDir = rtrim($this->_baseDir, '/'). '/';
         $this->_isWindows = (strpos(strtolower(php_uname('s')), 'win') !== false);
         $this->_fileStat = new Storage_Filesystem_FileStat();
@@ -62,7 +72,7 @@ class Storage_Filesystem implements Storage_Interface
 
     public function init($myrole, $drivers)
     {
-        $this->_out->logNotice(">>>init Filesystem driver as $myrole");
+        $this->_out->logNotice(">>>init ".get_class($this)." driver as $myrole");
         $this->_asRemote = $myrole==Core_Engine::ROLE_REMOTE;
         $this->_drivers = $drivers;
 

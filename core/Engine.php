@@ -329,7 +329,7 @@ class Core_Engine
             $class = "Compare_" . ucfirst($key);
         }
         self::$out->logDebug("configuring compare driver '$class' from key '$key'");
-        return new $class($this, self::$out, $params);
+        return new $class($key, $this, self::$out, $params);
     }
 
     protected function _getStorage($key)
@@ -345,7 +345,7 @@ class Core_Engine
             $class = "Storage_" . ucfirst($key);
         }
         self::$out->logDebug("configuring storage driver '$class' from key '$key'");
-        return new $class($this, self::$out, $params);
+        return new $class($key, $this, self::$out, $params);
     }
 
     protected function _configureLocalStorage()
@@ -445,6 +445,7 @@ class Core_Engine
         require_once "storage/Filesystem/FileStat.php";
         require_once "storage/Filesystem.php";
         require_once "filter/RegExp.php";
+        require_once "storage/Mysql.php";
 
         // load classes from extensions
         foreach ($this->_options['engine']['extensions'] as $path) {

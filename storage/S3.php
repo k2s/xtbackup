@@ -26,6 +26,12 @@ class Storage_S3 implements Storage_Interface
      */
     protected $_out;
     /**
+     * Identification of the object, it is the key from INI file
+     *
+     * @var string
+     */
+    protected $_identity;
+    /**
      *
      * @var array
      */
@@ -48,7 +54,7 @@ class Storage_S3 implements Storage_Interface
      *
      * @return \Storage_S3
      */
-    public function  __construct($engine, $output, $options)
+    public function  __construct($identity, $engine, $output, $options)
     {
         // merge options with default options
         Core_Engine::array_merge_defaults(
@@ -59,6 +65,7 @@ class Storage_S3 implements Storage_Interface
 
         // TODO see Compare_Sqlite constructor
 
+        $this->_identity = $identity;
         $this->_out = $output;
         $this->_options = $options;
         $this->_engine = $engine;

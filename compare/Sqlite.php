@@ -70,7 +70,7 @@ class Compare_Sqlite implements Compare_Interface, Iterator
      * @param Output_Stack $output
      * @param array $options
      */
-    public function  __construct($engine, $output, $options)
+    public function  __construct($identity, $engine, $output, $options)
     {
         // merge options with default options
         Core_Engine::array_merge_defaults(
@@ -89,7 +89,7 @@ class Compare_Sqlite implements Compare_Interface, Iterator
 
     public function init($myrole, $drivers)
     {
-        $this->_out->logNotice(">>>init Sqlite compare driver");
+        $this->_out->logNotice(">>>init ".get_class($this)." compare driver");
 
         $this->_out->logDebug("opening DB file: " . $this->_options['file']);
         $this->_open();

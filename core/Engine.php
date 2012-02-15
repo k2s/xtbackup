@@ -300,6 +300,7 @@ class Core_Engine
                         ? $this->_options['output'][$keyName]
                         : array();
                 $class = array_key_exists('class', $params) ? $params['class'] : $keyName;
+                // TODO pass $keyName to constructor
                 $class = "Output_" . ucfirst($class);
                 $outputs[] = new $class($params);
             }

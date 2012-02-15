@@ -432,20 +432,13 @@ class Core_Engine
     protected function _initAutoload()
     {
         self::$out->logDebug("initializing class autoloading");
-
-        // load default classes
-        require_once "core/FsObject.php";
-        require_once "output/Blackhole.php";
-        require_once "output/Cli.php";
-        require_once "compare/Interface.php";
-        require_once "compare/Task.php";
-        require_once "compare/Sqlite.php";
-        require_once "storage/Interface.php";
-        require_once "storage/S3.php";
-        require_once "storage/Filesystem/FileStat.php";
-        require_once "storage/Filesystem.php";
-        require_once "filter/RegExp.php";
-        require_once "storage/Mysql.php";
+        spl_autoload_register(
+            function($className) {
+                $path = str_replace("_", "/", $className);
+                $path[0] = strtolower($path[0]);
+                require_once($path . '.php');
+            }
+        );
 
         // load classes from extensions
         foreach ($this->_options['engine']['extensions'] as $path) {

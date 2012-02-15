@@ -4,8 +4,8 @@
  */
 interface Storage_Interface {
 
-    /*function init($myrole, $drivers);
-    function refreshLocal($myrole, $drivers);
+    function init($myrole, $drivers);
+    /*function refreshLocal($myrole, $drivers);
     function refreshRemote($myrole, $drivers);
     function updateRemote($myrole, $drivers);*/
     function getBaseDir();

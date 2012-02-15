@@ -128,8 +128,8 @@ class Core_Engine
         // add default options to engine
         self::array_merge_defaults(
             $this->_options['engine'],
-            self::getConfigOptions(CfgPart::DEFAULTS),
-            self::getConfigOptions(CfgPart::HINTS)
+            static::getConfigOptions(CfgPart::DEFAULTS),
+            static::getConfigOptions(CfgPart::HINTS)
         );
 
         // initialize class autoloading
@@ -515,7 +515,7 @@ class Core_Engine
             CfgPart::SUGGESTED => false,
         );
         $driver = array(
-            'engine' => array('engine' => self::compactConfig(self::getConfigOptions())),
+            'engine' => array('engine' => self::compactConfig(static::getConfigOptions())),
             'storage' => array(),
             'filter' => array(),
             'compare' => array(),

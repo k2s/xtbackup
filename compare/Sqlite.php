@@ -75,8 +75,8 @@ class Compare_Sqlite implements Compare_Interface, Iterator
         // merge options with default options
         Core_Engine::array_merge_defaults(
             $options,
-            self::getConfigOptions(CfgPart::DEFAULTS),
-            self::getConfigOptions(CfgPart::HINTS)
+            static::getConfigOptions(CfgPart::DEFAULTS),
+            static::getConfigOptions(CfgPart::HINTS)
         );
 
         $options['prefix'] = false;

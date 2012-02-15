@@ -59,8 +59,8 @@ class Storage_S3 implements Storage_Interface
         // merge options with default options
         Core_Engine::array_merge_defaults(
             $options,
-            self::getConfigOptions(CfgPart::DEFAULTS),
-            self::getConfigOptions(CfgPart::HINTS)
+            static::getConfigOptions(CfgPart::DEFAULTS),
+            static::getConfigOptions(CfgPart::HINTS)
         );
 
         // TODO see Compare_Sqlite constructor

@@ -52,7 +52,7 @@ class Storage_Filesystem implements Storage_Interface
     public function  __construct($identity, $engine, $output, $options)
     {
         // merge options with default options
-        $options = $engine::array_merge_recursive_distinct(self::getConfigOptions(CfgPart::DEFAULTS), $options);
+        $options = $engine::array_merge_recursive_distinct(static::getConfigOptions(CfgPart::DEFAULTS), $options);
 
         $this->_identity = $identity;
         $this->_out = $output;

@@ -112,6 +112,9 @@ class Core_Engine
                 require_once 'output/Cli.php';
                 self::$out->outputAdd(new Output_Cli(array()));
             }
+        } else {
+            require_once 'output/Cli.php';
+            self::$out->outputAdd(new Output_Cli(array()));
         }
 
         // process configuration arguments
@@ -134,6 +137,10 @@ class Core_Engine
 
         // initialize class autoloading
         $this->_initAutoload();
+
+        if (false===$output) {
+            self::$out->outputRemove(0);
+        }
     }
 
     public function finish()
@@ -521,7 +528,9 @@ class Core_Engine
             'compare' => array(),
             'output' => array(),
         );
+
         // request getConfigOptions on all drivers
+        // TODO use reflection of files in folders because the classes do not have to be loaded into memory already
         foreach (get_declared_classes() as $className) {
             $implements = array_intersect(
                 class_implements($className),

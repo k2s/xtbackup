@@ -85,6 +85,11 @@ class Compare_Sqlite implements Compare_Interface, Iterator
         $this->_options = $options;
         $this->_engine = $engine;
         $this->_testing = $this->_options['testing']; // for faster access
+
+        // test if SQLite3 extension is loaded
+        if (!extension_loaded("sqlite3")) {
+            $this->_out->stop("PHP extension sqlite3 (http://www.php.net/manual/en/book.sqlite3.php) has to be loaded.");
+        }
     }
 
     public function init($myrole, $drivers)

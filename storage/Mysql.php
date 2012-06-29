@@ -1,5 +1,5 @@
 <?php
-class Storage_Mysql extends Storage_Filesystem
+class Storage_Mysql extends Storage_Filesystem implements Storage_Mysql_IStore
 {
     protected $_db;
     protected $_driver;
@@ -18,30 +18,9 @@ class Storage_Mysql extends Storage_Filesystem
 
         // mysql options
 
-        // debug file
-        $this->_debugFolder = $this->_baseDir.DIRECTORY_SEPARATOR."debug".DIRECTORY_SEPARATOR;
-        if ($this->_debugFolder) {
-            $this->clearFolder($this->_debugFolder);
-            @mkdir($this->_debugFolder);
-            $f = fopen($this->_debugFolder."1.sql", "w");
-            fputs($f, <<<SQL
-/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
-/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!40101 SET NAMES utf8 */;
-/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
-/*!40103 SET TIME_ZONE='+00:00' */;
-/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
-/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
-/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
-/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
-SQL
-            );
-            fclose($f);
-        }
     }
 
-    protected function clearFolder($str)
+    protected function _clearFolder($str, $first=true)
     {
        if(is_file($str)){
             return @unlink($str);
@@ -49,9 +28,12 @@ SQL
         elseif(is_dir($str)){
             $scan = glob(rtrim($str,'/').'/*');
             foreach($scan as $index=>$path){
-                $this->clearFolder($path);
+                $this->_clearFolder($path, false);
             }
-            return @rmdir($str);
+            if (!$first) {
+                @rmdir($str);
+            }
+            return;
         }
     }
 
@@ -94,6 +76,13 @@ SQL
         file_put_contents($fn, $def);
     }
 
+    public function storeFilenameFor($kind, $name)
+    {
+        $fn = $this->_baseDir.$kind;
+        @mkdir($fn);
+        return $fn.DIRECTORY_SEPARATOR.$name;
+    }
+
     public function init($myrole, $drivers)
     {
         parent::init($myrole, $drivers);
@@ -108,16 +97,44 @@ SQL
         $this->_db = new PDO("mysql:host=localhost;dbname=mysql", 'root', 'klifo', array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8"));
         // let PDO throw exception on errors
         $this->_db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        // because of data amount we shouldn't use buffered queries
+        $this->_db->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false);
 
         $this->_driver = $this->_getBackupDriver();
         $this->_driver->setDatabaseToBackup("informaglobal");
+
+        // check/clear target folder
+        // TODO check if it is empty and if we are allowed to delete it if not
+        $this->_clearFolder($this->_baseDir);
+
+        // prepare debug file if needed
+        $this->_debugFolder = $this->_baseDir.DIRECTORY_SEPARATOR."debug".DIRECTORY_SEPARATOR;
+        if ($this->_debugFolder) {
+            $this->_clearFolder($this->_debugFolder);
+            @mkdir($this->_debugFolder);
+            $f = fopen($this->_debugFolder."1.sql", "w");
+            fputs($f, <<<SQL
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+SQL
+            );
+            fclose($f);
+        }
 
         // retrieve all objects known in DB
         $objects = $this->_driver->listAvailableObjectsToBackup();
         // TODO filter objects which should be backed up
 
         // execute backup of DB objects
-        $this->_driver->doBackup(array($this, 'storeDbObject'));
+        $this->_driver->doBackup($this);
 
         $this->_out->stop("ok");
 

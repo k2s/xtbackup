@@ -50,8 +50,8 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
 
     function listAvailableObjectsToBackup($kind=false)
     {
-        /*if ($kind==self::KIND_TABLES) {
-            return array('_as_linkmanager_links');
+        /*if ($kind==self::KIND_TABLES || $kind==self::KIND_DATA) {
+            return array('video');
         }*/
 
         if ($kind===false) {
@@ -90,7 +90,7 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
 
     }
 
-    function doBackup($storeCallback)
+    function doBackup($store)
     {
         // make sure we already prepared backup
         $this->_prepareBackup();
@@ -98,16 +98,16 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
         foreach ($this->_kindsToBackup as $kind) {
             $funcName = "_backup".ucfirst($kind);
             if (method_exists($this, $funcName)) {
-                $this->$funcName($storeCallback);
+                $this->$funcName($store);
             } else {
                 echo "don't know of to backup objects of type '$kind'.\n";
             }
         }
     }
-    function _backupRefs($storeCallback) {}
-    function _backupIndexes($storeCallback) {}
+    function _backupRefs($store) {}
+    function _backupIndexes($store) {}
 
-    function _backupTables($storeCallback)
+    function _backupTables($store)
     {
         foreach ($this->listAvailableObjectsToBackup(self::KIND_TABLES) as $def) {
             // info SHOW TABLE STATUS LIKE 'TABLES';
@@ -166,37 +166,38 @@ SQL;
 
                 // store the table
                 $tbl = implode(PHP_EOL, $tbl);
-                call_user_func($storeCallback, self::KIND_TABLES, $def, $tbl.';');
+
+                $store->storeDbObject(self::KIND_TABLES, $def, $tbl.';');
 
                 // store tables indexes
                 if (count($idx)) {
                     array_unshift($idx, "ALTER TABLE `$def`");
                     $idx[count($idx)-1] = rtrim($idx[count($idx)-1], ',');
                     $idx = implode(PHP_EOL, $idx);
-                    call_user_func($storeCallback, self::KIND_INDEXES, $def, $idx.';');
+                    $store->storeDbObject(self::KIND_INDEXES, $def, $idx.';');
                 }
 
                 // store table constraints
                 if (count($refs)) {
                     array_unshift($refs, "ALTER TABLE `$def`");
                     $refs = implode(PHP_EOL, $refs);
-                    call_user_func($storeCallback, self::KIND_REFS, $def, $refs.';');
+                    $store->storeDbObject(self::KIND_REFS, $def, $refs.';');
                 }
             }
         }
     }
 
-    function _backupData($storeCallback)
+    function _backupData($store)
     {
         // TODO detect if server is localhost
         if (false) {
-            $this->_backupDataFromLocal($storeCallback);
+            $this->_backupDataFromLocal($store);
         } else {
-            $this->_backupDataFromRemote($storeCallback);
+            $this->_backupDataFromRemote($store);
         }
     }
 
-    function _backupDataFromLocal($storeCallback)
+    function _backupDataFromLocal($store)
     {
         // TODO not implemented
         /**
@@ -210,10 +211,65 @@ FROM my_table;
         }
     }
 
-    function _backupDataFromRemote($storeCallback)
+    function _backupDataFromRemote($store)
     {
         foreach ($this->listAvailableObjectsToBackup(self::KIND_DATA) as $def) {
-
+            $fn = $store->storeFilenameFor(self::KIND_DATA, $def);
+            $f = fopen($fn, "w");
+            $this->_tableDataToCsv($def, $f);
+            fclose($f);
         }
     }
+
+    protected function _tableDataToCsv($tableName, $f)
+    {
+        // TODO it may be better if Storage_Mysql whould hangle storing of array data
+        $q = $this->_db->query("SELECT * FROM `{$this->_dbName}`.`$tableName`");
+        //$q = $this->_db->query("SELECT * FROM `a`.`a_export`");
+        while (false!==($data=$q->fetch(PDO::FETCH_NUM))) {
+            // we have to convert null fields to \N
+            foreach ($data as &$c) {
+                if (is_null($c)) {
+                    $c = "\N";
+                } else {
+                    $c = strtr($c, array(
+                                     "\\" => "\\\\",
+                                     "\t" => "\\\t",
+                                     "\n" => "\\\n",
+                                     "\r" => "\\\r",
+                              ));
+                }
+            }
+
+            // store data in tab delimited format
+            //fputcsv($f, $data, "\t", ' ');
+            fwrite($f, implode("\t", $data).chr(13).chr(10));
+        }
+    }
+
 }
+
+SELECT * INTO OUTFILE '/tmp/a_export' FROM a_export
+
+
+
+
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+TRUNCATE TABLE cms_page;
+LOAD DATA LOCAL INFILE '/home/k2s/Backups/xtbackupMysql/data/cms_page' INTO TABLE cms_page CHARACTER SET UTF8;
+select count(*) from cms_page;
+
+
+
+DROP DATABASE a;
+CREATE DATABASE a;

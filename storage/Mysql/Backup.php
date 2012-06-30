@@ -61,9 +61,9 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
 
     function listAvailableObjectsToBackup($kind=false)
     {
-        if ($kind==self::KIND_TABLES || $kind==self::KIND_DATA) {
+        /*if ($kind==self::KIND_TABLES || $kind==self::KIND_DATA) {
             return array('video');
-        }
+        }*/
 
         if ($kind===false) {
             // build list object of all kinds

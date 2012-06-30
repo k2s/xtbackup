@@ -17,6 +17,10 @@ class Storage_Mysql extends Storage_Filesystem implements Storage_Mysql_IStore
         parent::__construct($identity, $engine, $output, $options);
 
         // mysql options
+        if (!array_key_exists('dbname', $this->_options)) {
+            $this->_out->stop("parameter 'dbname' is required by driver '{$this->_identity}'");
+        }
+
     }
 
     protected function _clearFolder($str, $first=true)
@@ -50,8 +54,9 @@ class Storage_Mysql extends Storage_Filesystem implements Storage_Mysql_IStore
                 'port'=>'mysql server port number',
                 'user'=>'mysql user name',
                 'password'=>'mysql user password',
+                'dbname'=>'database to backup',
             ),
-            CfgPart::REQUIRED=>array()
+            CfgPart::REQUIRED=>array('dbname')
         );
 
         // merge with Storage_Filesystem options
@@ -109,7 +114,7 @@ class Storage_Mysql extends Storage_Filesystem implements Storage_Mysql_IStore
         $this->_db->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false);
 
         $this->_driver = $this->_getBackupDriver();
-        $this->_driver->setDatabaseToBackup("informaglobal");
+        $this->_driver->setDatabaseToBackup($this->_options['dbname']);
 
         // check/clear target folder
         // TODO check if it is empty and if we are allowed to delete it if not

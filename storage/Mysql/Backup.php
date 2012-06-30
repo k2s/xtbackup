@@ -6,6 +6,7 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
      */
     protected $_db;
 
+    const KIND_DB = "db";
     const KIND_USERS = "users";
     const KIND_FUNCTIONS = "functions";
     const KIND_TABLES = "tables";
@@ -22,6 +23,7 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
      * @var array
      */
     protected $_kindsToBackup = array(
+        self::KIND_DB,
         self::KIND_USERS,
         self::KIND_FUNCTIONS,
         self::KIND_TABLES,
@@ -48,11 +50,18 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
         $this->_cachedObjectsToBackup = array();
     }
 
+    function addRestoreScript($folder)
+    {
+        $src = dirname(__FILE__).DIRECTORY_SEPARATOR.'cliRestore.php';
+        $trg = $folder.'restore.php';
+        copy($src, $trg);
+    }
+
     function listAvailableObjectsToBackup($kind=false)
     {
-        /*if ($kind==self::KIND_TABLES || $kind==self::KIND_DATA) {
+        if ($kind==self::KIND_TABLES || $kind==self::KIND_DATA) {
             return array('video');
-        }*/
+        }
 
         if ($kind===false) {
             // build list object of all kinds
@@ -85,16 +94,8 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
         // TODO allow exclusion of objects from backup
     }
 
-    protected function _prepareBackup()
-    {
-
-    }
-
     function doBackup($store)
     {
-        // make sure we already prepared backup
-        $this->_prepareBackup();
-
         foreach ($this->_kindsToBackup as $kind) {
             $funcName = "_backup".ucfirst($kind);
             if (method_exists($this, $funcName)) {
@@ -103,6 +104,19 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
                 echo "don't know of to backup objects of type '$kind'.\n";
             }
         }
+    }
+
+    /**
+     * @param Storage_Mysql_IStore $store
+     * @return void
+     */
+    function _backupDb($store)
+    {
+        // script DB creation
+        $def = $this->_db->query("show create DATABASE `{$this->_dbName}`;")->fetchColumn(1);
+        $store->storeDbObject(self::KIND_DB, "_name", $this->_dbName);
+        $store->storeDbObject(self::KIND_DB, "_create", $def);
+
     }
     function _backupRefs($store) {}
     function _backupIndexes($store) {}
@@ -187,6 +201,16 @@ SQL;
         }
     }
 
+    /**
+     * @param string $kind
+     * @param string $sql
+     * @return string
+     */
+    protected function _removeDefiner($kind, &$sql)
+    {
+
+    }
+
     function _backupData($store)
     {
         // TODO detect if server is localhost
@@ -248,13 +272,11 @@ FROM my_table;
     }
 
 }
-
-SELECT * INTO OUTFILE '/tmp/a_export' FROM a_export
-
-
-
-
-
+/**
+ * Create export file: SELECT * INTO OUTFILE '/tmp/a_export' FROM a_export
+ *
+ * Load data:
+*/
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
@@ -265,11 +287,6 @@ SELECT * INTO OUTFILE '/tmp/a_export' FROM a_export
 /*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
-TRUNCATE TABLE cms_page;
+/*TRUNCATE TABLE cms_page;
 LOAD DATA LOCAL INFILE '/home/k2s/Backups/xtbackupMysql/data/cms_page' INTO TABLE cms_page CHARACTER SET UTF8;
-select count(*) from cms_page;
-
-
-
-DROP DATABASE a;
-CREATE DATABASE a;
+select count(*) from cms_page;*/

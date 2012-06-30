@@ -135,6 +135,7 @@ SQL
 
         // execute backup of DB objects
         $this->_driver->doBackup($this);
+        $this->_driver->addRestoreScript($this->_baseDir);
 
         $this->_out->stop("ok");
 

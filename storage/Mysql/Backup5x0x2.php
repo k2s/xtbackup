@@ -22,7 +22,30 @@ class Storage_Mysql_Backup5x0x2 extends Storage_Mysql_Backup
         $this->_cachedObjectsToBackup[self::KIND_DATA] = $tables;
         $this->_cachedObjectsToBackup[self::KIND_INDEXES] = &$this->_cachedObjectsToBackup['tables'];
         $this->_cachedObjectsToBackup[self::KIND_REFS] = &$this->_cachedObjectsToBackup['tables'];
-        $this->_cachedObjectsToBackup[self::KIND_TRIGGERS] = &$this->_cachedObjectsToBackup['tables'];
+    }
+
+    protected function _cacheIndexes()
+    {
+        // this is handled already in _cacheTables()
+        $this->_cacheTables();
+    }
+    protected function _cacheViews()
+    {
+        // this is handled already in _cacheTables()
+        $this->_cacheTables();
+    }
+    protected function _cacheRefs()
+    {
+        // this is handled already in _cacheTables()
+        $this->_cacheTables();
+    }
+    protected function _cacheTriggers()
+    {
+        $sql = <<<SQL
+select trigger_name, event_object_table, event_object_schema from INFORMATION_SCHEMA.`TRIGGERS` where trigger_schema="{$this->_dbName}"
+SQL;
+        $q = $this->_db->query($sql);
+        $this->_cachedObjectsToBackup[self::KIND_TRIGGERS] = $q->fetchAll(PDO::FETCH_NUM);
     }
 
     protected function _cacheFunctions()

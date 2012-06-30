@@ -6,6 +6,8 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
      */
     protected $_db;
 
+    protected $_dbName;
+
     const KIND_DB = "db";
     const KIND_USERS = "users";
     const KIND_FUNCTIONS = "functions";
@@ -94,6 +96,11 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
         // TODO allow exclusion of objects from backup
     }
 
+    protected function _cacheDb()
+    {
+        $this->_cachedObjectsToBackup[self::KIND_DB] = array($this->_dbName);
+    }
+
     function doBackup($store)
     {
         foreach ($this->_kindsToBackup as $kind) {
@@ -110,7 +117,7 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
      * @param Storage_Mysql_IStore $store
      * @return void
      */
-    function _backupDb($store)
+    protected function _backupDb($store)
     {
         // script DB creation
         $def = $this->_db->query("show create DATABASE `{$this->_dbName}`;")->fetchColumn(1);
@@ -118,10 +125,44 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
         $store->storeDbObject(self::KIND_DB, "_create", $def);
 
     }
-    function _backupRefs($store) {}
-    function _backupIndexes($store) {}
+    protected function _backupRefs($store) {}
+    protected function _backupIndexes($store) {}
 
-    function _backupTables($store)
+    protected function _helperBackupCodeObject($store, $kind, $cmd, $colName)
+    {
+        foreach ($this->listAvailableObjectsToBackup($kind) as $def) {
+            if (is_array($def)) {
+                // we store multiple informations about triggers
+                $def = $def[0];
+            }
+            $sql = $this->_db->query($cmd." `{$this->_dbName}`.`$def`")->fetchColumn($colName);
+            $security = $this->_removeSecurity($kind, $sql);
+            // TODO store definer
+            $store->storeDbObject($kind, $def, "-- $security\n$sql");
+        }
+    }
+
+    protected function _backupFunctions($store)
+    {
+        $this->_helperBackupCodeObject($store, self::KIND_FUNCTIONS, "SHOW CREATE FUNCTION", 2);
+    }
+
+    protected function _backupViews($store)
+    {
+        $this->_helperBackupCodeObject($store, self::KIND_VIEWS, "SHOW CREATE VIEW", 1);
+    }
+
+    protected function _backupProcedures($store)
+    {
+        $this->_helperBackupCodeObject($store, self::KIND_PROCEDURES, "SHOW CREATE PROCEDURE", 2);
+    }
+
+    protected function _backupTriggers($store)
+    {
+        $this->_helperBackupCodeObject($store, self::KIND_TRIGGERS, "SHOW CREATE TRIGGER", 2);
+    }
+
+    protected function _backupTables($store)
     {
         foreach ($this->listAvailableObjectsToBackup(self::KIND_TABLES) as $def) {
             // info SHOW TABLE STATUS LIKE 'TABLES';
@@ -206,12 +247,42 @@ SQL;
      * @param string $sql
      * @return string
      */
-    protected function _removeDefiner($kind, &$sql)
+    protected function _removeSecurity($kind, &$sql)
     {
+    /*    switch ($kind) {
+            case self::KIND_FUNCTIONS:
+                $keyword = " FUNCTION ";
+                break;
+            case self::KIND_VIEWS:
+                $keyword = " VIEW ";
+                break;
+            default:
+                die("don't know how to extract security from object kind '$kind'\n");
+        }*/
 
+        // extract security definition
+        $security = "";
+        $a = explode("\n", $sql);
+        $b = array();
+        $l=0;
+        // this loop is here, because it may be good to extract also SQL SECURITY INVOKER attribute
+        foreach ($a as $s) {
+            if (++$l==1) {
+                // search for DEFINER
+                if (preg_match("/DEFINER=`([^`]+)`@`([^`]+)`/i", $s, $m, PREG_OFFSET_CAPTURE)>0) {
+                    $security = $m[0][0];
+                    $s = substr($s, 0, $m[0][1]-1).substr($s, $m[0][1]+strlen($m[0][0]));
+                }
+            }
+            $b[] = $s;
+        }
+
+        $sql = implode("\n", $b);
+
+        return $security;
     }
 
-    function _backupData($store)
+    protected function _backupData($store)
     {
         // TODO detect if server is localhost
         if (false) {
@@ -221,7 +292,7 @@ SQL;
         }
     }
 
-    function _backupDataFromLocal($store)
+    protected function _backupDataFromLocal($store)
     {
         // TODO not implemented
         /**
@@ -235,7 +306,7 @@ FROM my_table;
         }
     }
 
-    function _backupDataFromRemote($store)
+    protected function _backupDataFromRemote($store)
     {
         foreach ($this->listAvailableObjectsToBackup(self::KIND_DATA) as $def) {
             $fn = $store->storeFilenameFor(self::KIND_DATA, $def);

@@ -17,7 +17,6 @@ class Storage_Mysql extends Storage_Filesystem implements Storage_Mysql_IStore
         parent::__construct($identity, $engine, $output, $options);
 
         // mysql options
-
     }
 
     protected function _clearFolder($str, $first=true)
@@ -43,12 +42,16 @@ class Storage_Mysql extends Storage_Filesystem implements Storage_Mysql_IStore
             CfgPart::DEFAULTS=>array(
                 'host'=>'localhost',
                 'port'=>'3306',
+                'user'=>'root',
+                'password'=>'',
             ),
             CfgPart::DESCRIPTIONS=>array(
-                'host'=>'???',
-                'port'=>'???',
+                'host'=>'mysql server host name',
+                'port'=>'mysql server port number',
+                'user'=>'mysql user name',
+                'password'=>'mysql user password',
             ),
-            CfgPart::REQUIRED=>array('host', 'port')
+            CfgPart::REQUIRED=>array()
         );
 
         // merge with Storage_Filesystem options
@@ -94,7 +97,12 @@ class Storage_Mysql extends Storage_Filesystem implements Storage_Mysql_IStore
         }
 
         // connect to mysql
-        $this->_db = new PDO("mysql:host=localhost;dbname=mysql", 'root', 'klifo', array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8"));
+        $this->_db = new PDO(
+            "mysql:host=".$this->_options['host'].";dbname=mysql",
+            $this->_options['user'],
+            $this->_options['password'],
+            array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8")
+        );
         // let PDO throw exception on errors
         $this->_db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         // because of data amount we shouldn't use buffered queries

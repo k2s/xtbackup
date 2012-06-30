@@ -310,7 +310,8 @@ FROM my_table;
     {
         foreach ($this->listAvailableObjectsToBackup(self::KIND_DATA) as $def) {
             $fn = $store->storeFilenameFor(self::KIND_DATA, $def);
-            $f = fopen($fn, "w");
+            $f = fopen("compress.zlib://".$fn, "w");
+            // TODO make it optional $f = fopen($fn, "w");
             $this->_tableDataToCsv($def, $f);
             fclose($f);
         }

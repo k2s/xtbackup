@@ -16,7 +16,18 @@ try {
 //        'directory' => array('switch' => array('d', 'directory'), 'type' => GETOPT_VAL, 'help' => 'directory with backup data'),
         'database' => array('switch' => array('D', 'database'), 'type' => GETOPT_VAL, 'help' => 'target database name'),
         'drop-db' => array('switch' => array('drop-db'), 'type' => GETOPT_SWITCH, 'help' => 'will drop DB if exists'),
-        'quite' => array('switch' => array('q', 'quite'), 'type' => GETOPT_SWITCH, 'help' => 'will not prompt user to approve restore'),
+        'no-data' => array('switch' => array('no-data'), 'type' => GETOPT_SWITCH, 'help' => 'skip data import'),
+        'decompress-only' => array('switch' => array('do', 'decompress-only'), 'type' => GETOPT_SWITCH, 'help' => 'decompress data files only'),
+        'decompress-folder' => array('switch' => array('df', 'decompress-folder'), 'type' => GETOPT_VAL, 'help' => 'if data have to be uncompressed it will happen into data folder, you may change this with this option'),
+        'decompress-action' => array('switch' => array('da', 'decompress-action'), 'type' => GETOPT_VAL, 'default'=>'delete', 'help' => <<<TXT
+if data had to be decompressed on import this will happen after import completes:
+\tdelete - delete decompressed
+\tkeep - keep decompressed and compressed
+\treplace - keep decompressed and delete compressed
+TXT
+        ),
+        'force' => array('switch' => array('f', 'force'), 'type' => GETOPT_SWITCH, 'help' => 'will not prompt user to approve restore'),
+        'quite' => array('switch' => array('q', 'quite'), 'type' => GETOPT_SWITCH, 'help' => 'will not print messages'),
         'help' => array('switch' => array('h', 'help'), 'type' => GETOPT_SWITCH, 'help' => 'display instruction how to use cli.php'),
 /*        'action' => array('switch' => array('a', 'action'), 'type' => GETOPT_VAL, 'help' => 'what action to run'),
         'params' => array('switch' => 'p', 'type' => GETOPT_KEYVAL, 'help' => 'set request parameters'),
@@ -46,167 +57,465 @@ if (count($opts['cmdline'])!=1) {
     $folder = $opts['cmdline'][0];
 }
 
-/*
-if (!$opts['directory']) {
-    help($options, "ERROR: you have to specify backup directory (-d or --directory)");
+// object with main restore logic
+$restore = new RestoreMysql($folder, $opts);
+echo $restore->getInfo();
+
+if ($opts['decompress-only']) {
+    $restore->decompressOnly();
+    die();
 }
-*/
-
-$originalDbName = file_get_contents($folder . '/db/_name');
-if (!$opts['database']) {
-    $opts['database'] = $originalDbName;
-}
-
-/** connect to DB **/
-$db = new PDO(
-    "mysql:host=localhost;dbname=mysql",
-    $opts['user'],
-    $opts['password'],
-    array(
-         PDO::MYSQL_ATTR_LOCAL_INFILE=>1,
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-         PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8"
-    )
-);
-// let PDO throw exception on errors
-//$db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-/** show info */
 
 /** prompt if to continue **/
-if (!$opts['quite']) {
+if (!$opts['force']) {
     echo "do you want to start restore (y<enter>) ?";
     $fp = fopen('php://stdin', 'r');
-    $answr = trim(fgets($fp, 1024));
+    $answer = trim(fgets($fp, 1024));
     fclose($fp);
-    if (strtolower($answr)=="y") {
+    if (strtolower($answer)=="y") {
         echo "\n";
-        exit;
+        die(1);
     }
 }
 
-/** restore process **/
+$restore->restore();
+die($restore->getReturnCode());
 
-// drop database if requested
-if ($opts['drop-db']) {
-    $db->exec("DROP DATABASE IF EXISTS `$opts[database]`");
-}
 
-// create database
-$sql = file_get_contents($folder . '/db/_create');
-$sql = str_replace("`$originalDbName`", "`$opts[database]`", $sql);
-try {
-    $db->exec($sql);
-} catch (PDOException $e) {
-    if ($e->getCode()=="HY000") {
-        echo $e->getMessage()."\n";
-        exit(1);
+class RestoreMysql
+{
+    /**
+     * @var array
+     */
+    protected $_opts;
+    /**
+     * @var string
+     */
+    protected $_backupFolder;
+    /**
+     * @var \Log
+     */
+    protected $_log;
+    /**
+     * @var \PDO
+     */
+    protected $_db;
+    /**
+     * @var string
+     */
+    protected $_originalDbName;
+
+    const VALIDATE_RESTORE = 0;
+    const VALIDATE_DECOMPRESS = 1;
+
+    public function __construct($backupFolder, $opts)
+    {
+        $this->_opts = $opts;
+
+        $this->_backupFolder = $backupFolder;
+
+        $this->_originalDbName = file_get_contents($this->_backupFolder . '/db/_name');
+        if (!$this->_opts['database']) {
+            $this->_opts['database'] = $this->_originalDbName;
+        }
+
+        // prepare timer
+        $this->_log = new Log(!$opts['quite']);
     }
-    throw $e;
+
+    protected function _fixFolderName($folder)
+    {
+        return rtrim($folder, "/\\").DIRECTORY_SEPARATOR;
+    }
+    
+    public function validateOpts($opts, $action=self::VALIDATE_RESTORE)
+    {
+        $this->_backupFolder = $this->_fixFolderName($this->_backupFolder);
+        if (!$this->_opts['decompress-folder']) {
+            $this->_opts['decompress-folder'] = $this->_backupFolder.'data'.DIRECTORY_SEPARATOR;
+        } else {
+            $this->_opts['decompress-folder'] = $this->_fixFolderName($this->_opts['decompress-folder']);
+        }
+
+        switch ($this->_opts['decompress-action']) {
+            case 'delete':
+            case 'keep':
+            case 'replace':
+                break;
+            default:
+                throw new Exception("Unknown decompress action '".$this->_opts['decompress-action']."'.");
+        }
+
+        if ($action==self::VALIDATE_DECOMPRESS) {
+            return;
+        }
+    }
+
+    public function getOpts()
+    {
+        return $this->_opts;
+    }
+
+    public function getLog()
+    {
+        return $this->_log;
+    }
+
+    public function getReturnCode()
+    {
+        // no error
+        return 0;
+    }
+
+    public function getInfo()
+    {
+    }
+
+    protected function _connectMysql()
+    {
+        /** connect to DB **/
+        $this->_log->start("DB connection");
+        $this->_db = new PDO(
+            "mysql:host=localhost;dbname=mysql",
+            $this->_opts['user'],
+            $this->_opts['password'],
+            array(
+                // enable data load command
+                PDO::MYSQL_ATTR_LOCAL_INFILE=>1,
+                // let PDO throw exception on errors
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                // use UTF8 for object names
+                PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8"
+            )
+        );
+        $this->_log->end();
+    }
+
+    public function restore()
+    {
+        $this->validateOpts($this->_opts);
+
+        /** connect to DB **/
+        $this->_connectMysql();
+
+        // prepare shorter variable names
+        $log = $this->_log;
+        $db = $this->_db;
+        $opts = &$this->_opts;
+        $folder = &$this->_backupFolder;
+
+        // drop database if requested
+        if ($opts['drop-db']) {
+            $log->start("DB drop");
+            $this->_db->exec("DROP DATABASE IF EXISTS `$opts[database]`");
+        }
+
+        // create database
+        $log->start("DB prepare");
+        $sql = file_get_contents($folder. '/db/_create');
+        $sql = str_replace("`$this->_originalDbName`", "`$opts[database]`", $sql);
+        try {
+            $db->exec($sql);
+        } catch (PDOException $e) {
+            if ($e->getCode()=="HY000") {
+                echo $e->getMessage()."\n";
+                exit(1);
+            }
+            throw $e;
+        }
+
+        // change to DB
+        $db->query("use `$opts[database]`");
+
+        // prepare import
+        $sql = <<<SQL
+        /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+        /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+        /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+        /*!40101 SET NAMES utf8 */;
+        /*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+        /*!40103 SET TIME_ZONE='+00:00' */;
+        /*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+        /*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+        /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+        /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+SQL;
+        $db->exec($sql);
+
+        // create users
+        $log->start("USERS create");
+        $this->execSqlFromFolder($folder."users/");
+
+        // create functions
+        $log->start("FUNCTIONS create");
+        $this->execSqlFromFolder($folder."functions/");
+
+        // create tables
+        $log->start("TABLES create");
+        $this->execSqlFromFolder($folder."tables/");
+
+        // import data
+        if (!$opts['no-data']) {
+            // TODO detect if mysql server is on localhost
+            $log->start("DATA load (local server)");
+            $this->importDataFromFolderToLocalServer($folder."data/");
+        }
+
+        // create index
+        $log->start("INDEXES create");
+        $this->execSqlFromFolder($folder."indexes/");
+
+        // create references
+        $log->start("REFERENCES create");
+        $this->execSqlFromFolder($folder."refs/");
+
+        // create views
+        $log->start("VIEWS create");
+        $this->execSqlFromFolder($folder."views/", true);
+
+        // create procedures
+        $log->start("PROCEDURES create");
+        $this->execSqlFromFolder($folder."procedures/");
+
+        // create triggers
+        $log->start("TRIGGERS create");
+        $this->execSqlFromFolder($folder."triggers/");
+
+        // create grants
+        $log->start("GRANTS apply");
+        $this->execSqlFromFolder($folder."grants/");
+
+        /*
+        // finish import
+        $sql = <<<SQL
+
+SQL;
+        $log->start("DB finish");
+        $db->exec($sql);*/
+
+        $log->end();
+
+    }
+    function importDataFromFolderToRemoteServer($path, $truncate=true)
+    {
+        die("not supported yet");
+    }
+
+    public function decompressFile($srcFile, $dstFile)
+    {
+        echo "decompress $srcFile to $dstFile\n";
+        $fp = fopen($dstFile, "w");
+        $zp = gzopen($srcFile, "r");
+        while(!gzeof($zp)) {
+            $buf = gzread($zp, 1024*1024);
+            fwrite($fp, $buf, strlen($buf));
+        }
+        fclose($fp);
+        gzclose($zp);
+    }
+
+    /**
+     * @return string false if this file should be skipped, pass other values to _handleCompressedFileAction()
+     */
+    protected function _handleCompressedFile(&$fileName, $checkDataFolder=true)
+    {
+        $info = pathinfo($fileName);
+        if (!array_key_exists('extension', $info) || $info['extension']!="z") {
+            // it is not compressed file
+            return "";
+        }
+
+        if (!array_key_exists('filename', $info)) {
+            // PHP <5.2 compatibility
+            $info['filename'] = substr($info['basename'], 0, -(1+strlen($info['extension'])));
+        }
+
+        if ($checkDataFolder && file_exists($this->_backupFolder.'data'.DIRECTORY_SEPARATOR.$info['filename'])) {
+            // skip it, don't worry it will be imported
+            return false;
+        }
+
+        // we need to decompress the file
+        $srcFile = $fileName;
+        $fn = $info['filename'];
+        $fileName = $this->_opts['decompress-folder'].$fn;
+
+        if (!file_exists($fileName)) {
+            // decompressed if doesn't exists already
+            $this->decompressFile($srcFile, $fileName);
+        }
+
+        switch ($this->_opts['decompress-action']) {
+            case 'delete':
+                return $fileName;
+            case 'keep':
+                return "";
+            case 'replace':
+                return $srcFile;
+            default:
+                throw new Exception("Was validateOpts() called ? Unknown decompress action '".$this->_opts['decompress-action']."'.");
+        }
+    }
+
+    function _handleCompressedFileAction($action)
+    {
+        if ($action) {
+            unlink($action);
+        }
+    }
+
+    public function decompressOnly()
+    {
+        $this->validateOpts($this->_opts, self::VALIDATE_DECOMPRESS);
+
+        $path = $this->_backupFolder.'data'.DIRECTORY_SEPARATOR;
+        if (file_exists($path) && false!==($handle = opendir($path))) {
+            while (false !== ($fn = readdir($handle))) {
+                if ($fn!="." && $fn!="..") {
+                    $fullFn = $path.$fn;
+                    if (false===($afterAction = $this->_handleCompressedFile($fullFn, false))) {
+                        // skip this file
+                        continue;
+                    }
+
+                    // maybe delete some files after import
+                    //$this->_handleCompressedFileAction($afterAction);
+                }
+            }
+            closedir($handle);
+        }
+
+    }
+
+    function importDataFromFolderToLocalServer($path, $truncate=true)
+    {
+        if (file_exists($path) && false!==($handle = opendir($path))) {
+            while (false !== ($fn = readdir($handle))) {
+                if ($fn!="." && $fn!="..") {
+                    $fullFn = $path.$fn;
+                    if (false===($afterAction = $this->_handleCompressedFile($fullFn))) {
+                        // skip this file
+                        continue;
+                    }
+
+                    $fn = basename($fullFn);
+                    echo "import data to table '$fn'\n";
+                    if ($truncate) {
+                        $this->_db->exec("TRUNCATE TABLE `$fn`");
+                    }
+
+                    // TODO LINES TERMINATED BY should maybe be configurable on command line or stored in/db/_config
+                    $this->_db->exec("LOAD DATA INFILE '$fullFn' INTO TABLE `$fn` CHARACTER SET UTF8 LINES TERMINATED BY '\r\n';");
+
+                    // maybe delete some files after import
+                    $this->_handleCompressedFileAction($afterAction);
+                }
+            }
+            closedir($handle);
+        }
+    }
+
+    function execSqlFromFolderTogether($path)
+    {
+        // doesn't seam to be faster localy and there is risk, that the SQL command will be too long
+        // some speed improvement should be visible if executed on remote server
+        // TODO we have to play with this more
+        global $db;
+
+        $sql = "";
+        if (file_exists($path) && false!==($handle = opendir($path))) {
+            while (false !== ($fn = readdir($handle))) {
+                if ($fn!="." && $fn!="..") {
+                    $fullFn = $path.$fn;
+                    $sql .= file_get_contents($fullFn);
+                }
+            }
+
+            $this->_db->exec($sql);
+
+            closedir($handle);
+        }
+    }
+
+    function execSqlFromFolder($path, $tryRepeat=false)
+    {
+        $repeat = array();
+        if (file_exists($path) && false!==($handle = opendir($path))) {
+            while (false !== ($fn = readdir($handle))) {
+                if ($fn!="." && $fn!="..") {
+                    $fullFn = $path.$fn;
+                    $sql = file_get_contents($fullFn);
+                    try {
+                        $this->_db->exec($sql);
+                    } catch (Exception $e) {
+                        if ($tryRepeat) {
+                            if (!array_key_exists($fullFn, $repeat)) {
+                                $repeat[$fullFn] = array($e);
+                            } else {
+                                $repeat[$fullFn][] = $e;
+                            }
+                        } else {
+                            throw new Exception("ERROR: in file '$fullFn'" , null, $e);
+                        }
+                    }
+                }
+            }
+            closedir($handle);
+        }
+
+        if ($repeat) {
+            $this->execSqlFromArray($repeat);
+        }
+
+    }
+
+    function execSqlFromArray($repeatFiles)
+    {
+        $tryRepeat = true;
+
+        $repeat = array();
+        foreach (array_reverse($repeatFiles) as $fullFn=>$es) {
+            $sql = file_get_contents($fullFn);
+            try {
+                $this->_db->exec($sql);
+            } catch (Exception $e) {
+                if ($tryRepeat) {
+                    if (!array_key_exists($fullFn, $repeat)) {
+                        $repeat[$fullFn] = array($e);
+                    } else {
+                        $repeat[$fullFn][] = $e;
+                    }
+                } else {
+                    throw new Exception("ERROR: in file '$fullFn'" , null, $e);
+                }
+            }
+
+        }
+
+        if (count($repeat)==0) {
+            // all done
+            return;
+        }
+
+        // if again the same array was produced we have to stop
+        if (count(array_diff(array_keys($repeatFiles), array_keys($repeat)))==0) {
+            throw new ExceptionUnsolvable($repeat);
+        }
+
+        // try again
+        $this->execSqlFromArray($repeat);
+    }
 }
-
-// change to DB
-$db->query("use `$opts[database]`");
-
-// prepare import
-$sql = <<<SQL
-/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
-/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!40101 SET NAMES utf8 */;
-/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
-/*!40103 SET TIME_ZONE='+00:00' */;
-/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
-/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
-/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
-/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
-SQL;
-$db->exec($sql);
-
-// create users
-execSqlFromFolder($folder."/users/");
-
-// create functions
-execSqlFromFolder($folder."/functions/");
-
-// create tables
-execSqlFromFolder($folder."/tables/");
-
-// import data
-// TODO detect if mysql server is on localhost
-importDataFromFolderToLocalServer($folder."/data/");
-
-// create index
-execSqlFromFolder($folder."/indexes/");
-
-// create references
-execSqlFromFolder($folder."/refs/");
-
-// create views
-execSqlFromFolder($folder."/views/");
-
-// create procedures
-execSqlFromFolder($folder."/procedures/");
-
-// create triggers
-execSqlFromFolder($folder."/triggers/");
-
-// create grants
-execSqlFromFolder($folder."/grants/");
-
-// finish import
-$sql = <<<SQL
-
-SQL;
-//$db->exec($sql);
-
 
 
 //////////////////////////////////////
-function importDataFromFolderToRemoteServer($path, $truncate=true)
-{
-    die("not supported yet");
-}
-function importDataFromFolderToLocalServer($path, $truncate=true)
-{
-    global $db;
-
-    if (file_exists($path) && false!==($handle = opendir($path))) {
-        while (false !== ($fn = readdir($handle))) {
-            if ($fn!="." && $fn!="..") {
-                echo "import data to table '$fn'\n";
-                if ($truncate) {
-                    $db->exec("TRUNCATE TABLE `$fn`");
-                }
-
-                $db->exec("LOAD DATA INFILE '$path$fn' INTO TABLE `$fn` CHARACTER SET UTF8;");
-            }
-        }
-        closedir($handle);
-    }
-}
-
-function execSqlFromFolder($path)
-{
-    global $db;
-    if (file_exists($path) && false!==($handle = opendir($path))) {
-        while (false !== ($fn = readdir($handle))) {
-            if ($fn!="." && $fn!="..") {
-                $sql = file_get_contents($path.$fn);
-                $db->exec($sql);
-            }
-        }
-        closedir($handle);
-    }
-}
-
 function help($opts, $message=false)
 {
     $cmdName = basename(__FILE__);
     echo "Run with interpreter: php -f {$cmdName}.php -- [<parameters>] [<backup folder>]\n";
     echo "Example: php -f cli.php -- -D newdb /tmp/backup\n";
 
-    foreach ($opts as $flag => $opt) {
+    foreach ($opts as $opt) {
 //        var_dump($opt);die();
         if (isset($opt['switch'][1]) && isset($opt['switch'][0])) {
             echo '-' . $opt['switch'][0] . ', --' . $opt['switch'][1] . (isset($opt['help']) ? "\t" . $opt['help'] : '') . "\n";
@@ -222,8 +531,85 @@ function help($opts, $message=false)
     }
 }
 
+class ExceptionUnsolvable extends Exception
+{
+    public function __construct($filesWithErrors)
+    {
+        $this->_filesWithErrors = $filesWithErrors;
+    }
 
-	/**********************************************************************************
+    public function getFilesWithErrors()
+    {
+        return $this->_filesWithErrors;
+    }
+
+    public function __toString()
+    {
+        return "Unsolvable errors exists:\n".print_r($this->_filesWithErrors, true);
+    }
+}
+
+class Log
+{
+    // thx http://davidwalsh.name/php-timer-benchmark
+    protected $_start;
+    protected $_text = false;
+    protected $_doEcho;
+
+    public function __construct($echo)
+    {
+        $this->_doEcho = $echo;
+    }
+
+    public function __destruct()
+    {
+        if ($this->_text!==false) {
+            echo '!!! incorrect log shutdown'.PHP_EOL;
+            echo $this->_text.' ... duration '.$this->get().' seconds'.PHP_EOL;
+        }
+    }
+
+    protected function _echo()
+    {
+        if ($this->_doEcho && $this->_text!==false) {
+            echo $this->_text.' ... duration '.$this->get().' seconds'.PHP_EOL;
+        }
+        $this->_text = false;
+    }
+
+    function start($text, $echoOnStart=true)
+    {
+        $this->_echo();
+        $this->_start = $this->getTime();
+        $this->_text = $text;
+
+        if ($echoOnStart && $this->_doEcho && $this->_text!==false) {
+            echo $this->_text.' ... START'.PHP_EOL;
+        }
+    }
+
+    function end()
+    {
+        $this->_echo();
+    }
+
+    /*  get the current timer value  */
+    function get($decimals = 8)
+    {
+        return round(($this->getTime() - $this->_start), $decimals);
+    }
+
+    /*  format the time in seconds  */
+    function getTime()
+    {
+        $usec = $sec = 0;
+        list($usec, $sec) = explode(' ', microtime());
+        return ((float) $usec + (float) $sec);
+    }
+}
+
+
+/**********************************************************************************
 	* Coded by Matt Carter (M@ttCarter.net)                                           *
 	***********************************************************************************
 	* getOpts                                                                       *
@@ -379,6 +765,7 @@ function getopts($options,$fromarr = null) {
 		}
 	}
 
+    $inswitch_userkey = $inswitch_key = "";
 	$inswitch = GETOPT_NOTSWITCH;
 	for ($i = 1; $i < count($fromarr); $i++) {
 		switch ($inswitch) {

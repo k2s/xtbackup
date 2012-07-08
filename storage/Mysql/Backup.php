@@ -6,6 +6,12 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
      */
     protected $_db;
 
+    /**
+     * Should data files be compressed
+     * @var bool
+     */
+    protected $_compressDataFiles = false;
+
     protected $_dbName;
 
     const KIND_DB = "db";
@@ -50,6 +56,11 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
         $this->_dbName = $name;
         $this->_db->query("use `$name`");
         $this->_cachedObjectsToBackup = array();
+    }
+
+    function setDataCompression($compressDataFiles)
+    {
+        $this->_compressDataFiles = $compressDataFiles;
     }
 
     function addRestoreScript($folder)
@@ -310,8 +321,11 @@ FROM my_table;
     {
         foreach ($this->listAvailableObjectsToBackup(self::KIND_DATA) as $def) {
             $fn = $store->storeFilenameFor(self::KIND_DATA, $def);
-            $f = fopen("compress.zlib://".$fn.".zlib", "w");
-            // TODO make it optional $f = fopen($fn, "w");
+            if ($this->_compressDataFiles) {
+                $f = fopen("compress.zlib://".$fn.".z", "w");
+            } else {
+                    $f = fopen($fn, "w");
+            }
             $this->_tableDataToCsv($def, $f);
             fclose($f);
         }

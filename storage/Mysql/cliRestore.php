@@ -63,7 +63,8 @@ echo $restore->getInfo();
 
 if ($opts['decompress-only']) {
     $restore->decompressOnly();
-    die();
+    // end with return code
+    die($restore->getReturnCode());
 }
 
 /** prompt if to continue **/
@@ -74,16 +75,22 @@ if (!$opts['force']) {
     fclose($fp);
     if (strtolower($answer)=="y") {
         echo "\n";
-        die(1);
+        // return code to recognize user cancellation
+        die(RestoreMysql::RETCODE_USER_CANCEL);
     }
 }
 
 $restore->restore();
+
+// end with return code
 die($restore->getReturnCode());
 
 
 class RestoreMysql
 {
+    const RETCODE_OK = 0;
+    const RETCODE_USER_CANCEL = 1;
+
     /**
      * @var array
      */
@@ -164,7 +171,7 @@ class RestoreMysql
     public function getReturnCode()
     {
         // no error
-        return 0;
+        return self::RETCODE_OK;
     }
 
     public function getInfo()

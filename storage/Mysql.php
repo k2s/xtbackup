@@ -20,7 +20,6 @@ class Storage_Mysql extends Storage_Filesystem implements Storage_Mysql_IStore
         if (!array_key_exists('dbname', $this->_options)) {
             $this->_out->stop("parameter 'dbname' is required by driver '{$this->_identity}'");
         }
-
     }
 
     protected function _clearFolder($str, $first=true)
@@ -48,6 +47,7 @@ class Storage_Mysql extends Storage_Filesystem implements Storage_Mysql_IStore
                 'port'=>'3306',
                 'user'=>'root',
                 'password'=>'',
+                'compressdata'=>false,
             ),
             CfgPart::DESCRIPTIONS=>array(
                 'host'=>'mysql server host name',
@@ -55,12 +55,10 @@ class Storage_Mysql extends Storage_Filesystem implements Storage_Mysql_IStore
                 'user'=>'mysql user name',
                 'password'=>'mysql user password',
                 'dbname'=>'database to backup',
+                'compressdata'=>'compress data files on the fly',
             ),
             CfgPart::REQUIRED=>array('dbname')
         );
-
-        // merge with Storage_Filesystem options
-        $opt = Core_Engine::array_merge_recursive_distinct(parent::getConfigOptions(CfgPart::DEFAULTS), $opt);
 
         if (is_null($part)) {
             return $opt;
@@ -115,6 +113,7 @@ class Storage_Mysql extends Storage_Filesystem implements Storage_Mysql_IStore
 
         $this->_driver = $this->_getBackupDriver();
         $this->_driver->setDatabaseToBackup($this->_options['dbname']);
+        $this->_driver->setDataCompression($this->_options['compressdata']);
 
         // check/clear target folder
         // TODO check if it is empty and if we are allowed to delete it if not

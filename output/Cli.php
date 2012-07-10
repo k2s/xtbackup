@@ -264,7 +264,7 @@ class Output_Cli extends Output_Blackhole
     {
         $opt = array(
             CfgPart::DEFAULTS=>array(
-                'verbosity'=>'debug',
+                'verbosity'=>'notice',
                 'progress'=>true,
             ),
             CfgPart::DESCRIPTIONS=>array(

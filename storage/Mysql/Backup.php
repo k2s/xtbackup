@@ -119,7 +119,7 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
             if (method_exists($this, $funcName)) {
                 $this->$funcName($store);
             } else {
-                echo "don't know of to backup objects of type '$kind'.\n";
+                echo "don't know how to backup objects of type '$kind'.\n";
             }
         }
     }

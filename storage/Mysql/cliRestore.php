@@ -73,7 +73,7 @@ if (!$opts['force']) {
     $fp = fopen('php://stdin', 'r');
     $answer = trim(fgets($fp, 1024));
     fclose($fp);
-    if (strtolower($answer)=="y") {
+    if (strtolower($answer)!=="y") {
         echo "\n";
         // return code to recognize user cancellation
         die(RestoreMysql::RETCODE_USER_CANCEL);

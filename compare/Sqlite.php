@@ -499,6 +499,7 @@ SQL;
                 'rebuild' => array(CfgPart::HINT_TYPE=>CfgPart::TYPE_BOOL),
                 'keep' => array(CfgPart::HINT_TYPE=>CfgPart::TYPE_BOOL),
                 'compare' => array(CfgPart::HINT_TYPE=>CfgPart::TYPE_BOOL),
+                'file' => array(CfgPart::HINT_TYPE=>CfgPart::TYPE_PATH)
             ),
             CfgPart::DEFAULTS => array(
                 'testing' => false,

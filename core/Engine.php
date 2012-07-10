@@ -198,7 +198,8 @@ class Core_Engine
 
         if (!$onlyReturn) {
             // merge with existing options
-            $this->_optionsIni = array_merge_recursive($this->_optionsIni, $options);
+            //$this->_optionsIni = array_merge_recursive($this->_optionsIni, $options);
+            $this->_optionsIni = Core_Engine::array_merge_recursive_distinct($this->_optionsIni, $options);
         }
 
         return $options;
@@ -273,6 +274,7 @@ class Core_Engine
         if (!is_array($options)) {
             $options = array();
         }
+        // merge defaults
         foreach ($defaults as $key=>$val) {
             if (array_key_exists($key, $options)) {
                 if (is_array($val)) {
@@ -283,6 +285,27 @@ class Core_Engine
             } else {
                 $options[$key] = $val;
             }
+        }
+
+        // apply hints
+        foreach ($hints as $key=>$hint) {
+            if (array_key_exists($key, $options)) {
+                if (isset($hint[CfgPart::HINT_TYPE])) {
+                    switch ($hint[CfgPart::HINT_TYPE]) {
+                        case CfgPart::TYPE_PATH:
+                            self::tildeToHome($options[$key]);
+                            break;
+                    }
+                }
+            }
+        }
+    }
+
+    public static function tildeToHome(&$o)
+    {
+        $s = substr($o, 0, 2);
+        if ($s=="~/" || $s=="~\\") {
+            $o = getenv("HOME").substr($o, 1);
         }
     }
 

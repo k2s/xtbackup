@@ -12,6 +12,11 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
      */
     protected $_compressDataFiles = false;
 
+    /**
+     * @var Output_Interface
+     */
+    protected $out;
+
     protected $_dbName;
 
     const KIND_DB = "db";
@@ -58,6 +63,11 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
         $this->_cachedObjectsToBackup = array();
     }
 
+    function setOutput($out)
+    {
+        $this->_out = $out;
+    }
+
     function setDataCompression($compressDataFiles)
     {
         $this->_compressDataFiles = $compressDataFiles;
@@ -93,7 +103,7 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
             if (method_exists($this, $funcName)) {
                 $this->$funcName();
             } else {
-                echo "don't know of to build list of '$kind'.\n";
+                $this->_out->logWarning("don't know of to build list of '$kind'.");
                 $this->_cachedObjectsToBackup[$kind] = array();
             }
 
@@ -119,7 +129,7 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
             if (method_exists($this, $funcName)) {
                 $this->$funcName($store);
             } else {
-                echo "don't know how to backup objects of type '$kind'.\n";
+                $this->_out->logWarning("don't know how to backup objects of type '$kind'");
             }
         }
     }

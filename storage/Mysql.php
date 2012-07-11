@@ -1,6 +1,9 @@
 <?php
 class Storage_Mysql extends Storage_Filesystem implements Storage_Mysql_IStore
 {
+    /**
+     * @var PDO
+     */
     protected $_db;
     protected $_driver;
     protected $_debugFolder;
@@ -63,11 +66,13 @@ class Storage_Mysql extends Storage_Filesystem implements Storage_Mysql_IStore
                 'dbname'=><<<TXT
 Database to backup if string or array of databases to backup.
 If array it may be string expressing name of db or array overriding default settings.
-Allowed settings are dbname (array key is used if not provided), addtobasedir, compressdata.
+If it is string starting with / then the text is executed as SQL command and its results are used instead.
+
+Override of following settings is possible: dbname (array key is used if not provided), addtobasedir, compressdata.
 Consult examples in examples/mysql folder.',
 TXT
                 ,
-                'dbname.sql'=>"SQL select which will replace dbname with multiple values (eg. SELECT schema_name as dbname, false as compressdata FROM `information_schema`.`schemata` WHERE schema_name not in ('mysql', 'informa_schema'))",
+                'dbname.sql'=>"SQL select which will replace dbname with multiple values (eg. SELECT schema_name as dbname, false as compressdata FROM `information_schema`.`schemata` WHERE schema_name not in ('mysql', 'information_schema'))",
                 'addtobasedir'=>'',
                 'compressdata'=>'compress data files on the fly',
             ),
@@ -119,6 +124,21 @@ TXT
         return $fn.DIRECTORY_SEPARATOR.$name;
     }
 
+    protected function _sqlToDbNames($sql)
+    {
+        $this->_out->logDebug("retrieving list of DBs to backup from SQL: ".$sql);
+        $q = $this->_db->query($sql);
+        $ret = $q->fetchAll(PDO::FETCH_ASSOC);
+
+        if (count($ret)) {
+            if (!array_key_exists("dbname", $ret[0])) {
+                throw new Core_StopException("Column name `dbname` missing in result of SQL command `$sql`.", "retrieving DB names to backup");
+            }
+        }
+
+        return $ret;
+    }
+
     public function init($myrole, $drivers)
     {
         parent::init($myrole, $drivers);
@@ -147,11 +167,24 @@ TXT
         $dbname = $this->_options['dbname'];
         $dbsToBackup = array();
         if (is_string($dbname)) {
-            $dbsToBackup = array($dbname=>array(
-                'dbname'=>$dbname,
-                'addtobasedir'=>$this->_options['addtobasedir']
-            ));
-        } else {
+            if ($dbname=='*') {
+                // all dbs
+                $this->_out->logNotice("retrieving names of all DBs from MySql server");
+                $dbname = $this->_sqlToDbNames("SELECT schema_name as dbname FROM `information_schema`.`schemata` WHERE schema_name not in ('information_schema')");
+            } elseif ($dbname[0]=='/') {
+                // SQL
+                $this->_out->logNotice("retrieving DB names based on provided SQL from MySql server");
+                $dbname = $this->_sqlToDbNames(substr($dbname, 1));
+            } else {
+                // dbname only
+                $dbsToBackup = array($dbname=>array(
+                    'dbname'=>$dbname,
+                    'addtobasedir'=>$this->_options['addtobasedir']
+                ));
+            }
+        }
+        if (is_array($dbname)) {
+            // array or SQL was provided
             foreach ($dbname as $k=>&$v) {
                 if (is_array($v)) {
                     if (!array_key_exists('dbname', $v)) {
@@ -176,7 +209,7 @@ TXT
                 $dbConfig['compressdata'] = $this->_options['compressdata'];
             }
             if (!array_key_exists('addtobasedir', $dbConfig)) {
-                $dbConfig['addtobasedir'] = $dbname;
+                $dbConfig['addtobasedir'] = $dbConfig['dbname'];
             }
             // TODO filter options
         }
@@ -196,8 +229,11 @@ TXT
             }
 
             // check/clear target folder
-            // TODO check if it is empty and if we are allowed to delete it if not
-            $this->_clearFolder($this->_baseDir);
+            if (file_exists($this->_baseDir)) {
+                // TODO check if it is empty and if we are allowed to delete it if not
+                $this->_out->logWarning("removing existing content from backup folder '$this->_baseDir'");
+                $this->_clearFolder($this->_baseDir);
+            }
 
             // prepare debug file if needed
             if (isset($this->_options['_debugFolder']) && $this->_options['_debugFolder']) { // undocumented config option
@@ -228,13 +264,17 @@ SQL
             // TODO filter objects which should be backed up
 
             // execute backup of DB objects
+            $msg = "creating backup of DB '$dbConfig[dbname]' to folder '$this->_baseDir'";
+            if ($dbConfig['compressdata']) {
+                $msg .= ", data will be online compressed";
+            }
+            $this->_out->logNotice($msg);
             $this->_driver->doBackup($this);
+            $this->_out->logNotice("adding restore script");
             $this->_driver->addRestoreScript($this->_baseDir);
         }
 
         $this->_baseDir = $originalBaseDir;
-
-
         // $this->_out->stop("ok");
 
         return true;
@@ -255,6 +295,7 @@ SQL
         }*/
         $driver = new Storage_Mysql_Backup5x0x2();
         $driver->setConnection($this->_db);
+        $driver->setOutput($this->_out);
         return $driver;
     }
 }

@@ -275,7 +275,8 @@ SQL
         }
 
         $this->_baseDir = $originalBaseDir;
-        // $this->_out->stop("ok");
+
+        $this->_out->logNotice("mysql backup finished");
 
         return true;
     }

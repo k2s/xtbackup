@@ -481,11 +481,9 @@ SQL;
 
                     $task = $this->_log->subtask()->start("import data to table '$fn' from file '$fullFn'");
                     // TODO LINES TERMINATED BY should maybe be configurable on command line or stored in/db/_config
-                    // ALTER TABLE TABLE_NAME DISABLE KEYS; LOAD DATA INFILE ... ; ALTER TABLE TABLE_NAME ENABLE KEYS;
+                    // ALTER TABLE `$fn` DISABLE KEYS; ALTER TABLE `$fn` ENABLE KEYS;
                     $this->_db->exec(<<<SQL
-ALTER TABLE `$fn` DISABLE KEYS;
 LOAD DATA INFILE '$fullFn' INTO TABLE `$fn` CHARACTER SET UTF8 LINES TERMINATED BY '\r\n';
-ALTER TABLE `$fn` ENABLE KEYS;
 SQL
                     );
                     $task->end();

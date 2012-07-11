@@ -453,11 +453,18 @@ SQL;
 
     }
 
-    function importDataFromFolderToLocalServer($path, $truncate=true)
+    function importDataFromFolderToLocalServer($subPath, $truncate=true)
     {
+        $path = $this->_backupFolder.$subPath.DIRECTORY_SEPARATOR;
         if (file_exists($path) && false!==($handle = opendir($path))) {
             while (false !== ($fn = readdir($handle))) {
                 if ($fn!="." && $fn!="..") {
+
+                    if (1!==$this->_filterExt($subPath, $fn)) {
+                        $task = $this->_log->subtask()->log("skip '$fn' because of external filter");
+                        continue;
+                    }
+
                     $fullFn = realpath($path.$fn);
                     if (false===($afterAction = $this->_handleCompressedFile($fullFn))) {
                         // skip this file

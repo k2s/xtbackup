@@ -8,8 +8,8 @@ switch ($action) {
         exit(123);
     case "data":
         // restrict what data we want to import
-        if (substr($objectName, 0, 3)=="nl_") {
-            // we don't want to import tables with names beginning nl_
+        if (substr($objectName, 0, 5)=="help_") {
+            // we don't want to import tables with names beginning help_
             exit(0);
         }
         break;

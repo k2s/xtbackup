@@ -52,7 +52,11 @@ class Storage_Filesystem implements Storage_Interface
     public function  __construct($identity, $engine, $output, $options)
     {
         // merge options with default options
-        $options = $engine::array_merge_recursive_distinct(static::getConfigOptions(CfgPart::DEFAULTS), $options);
+        Core_Engine::array_merge_defaults(
+            $options,
+            static::getConfigOptions(CfgPart::DEFAULTS),
+            static::getConfigOptions(CfgPart::HINTS)
+        );
 
         $this->_identity = $identity;
         $this->_out = $output;
@@ -298,6 +302,9 @@ class Storage_Filesystem implements Storage_Interface
                 //'basedir'=>,
                 'windows'=>array('encoding'=>'utf8'),
 
+            ),
+            CfgPart::HINTS=>array(
+                'basedir'=>array(CfgPart::HINT_TYPE=>CfgPart::TYPE_PATH),
             ),
             CfgPart::DESCRIPTIONS=>array(
                 'refresh'=>'read actual data about file system and feed compare driver ?',

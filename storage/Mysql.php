@@ -3,7 +3,7 @@ class Storage_Mysql extends Storage_Filesystem implements Storage_Mysql_IStore
 {
     protected $_db;
     protected $_driver;
-    protected $_debugFileName;
+    protected $_debugFolder;
     /**
      * @param Core_Engine  $engine
      * @param Output_Stack $output
@@ -29,6 +29,10 @@ class Storage_Mysql extends Storage_Filesystem implements Storage_Mysql_IStore
         }
         elseif(is_dir($str)){
             $scan = glob(rtrim($str,'/').'/*');
+            if (!$scan) {
+                // empty directory
+                return;
+            }
             foreach($scan as $index=>$path){
                 $this->_clearFolder($path, false);
             }
@@ -41,6 +45,7 @@ class Storage_Mysql extends Storage_Filesystem implements Storage_Mysql_IStore
 
     static public function getConfigOptions($part=null)
     {
+        // new options
         $opt = array(
             CfgPart::DEFAULTS=>array(
                 'host'=>'localhost',
@@ -48,17 +53,42 @@ class Storage_Mysql extends Storage_Filesystem implements Storage_Mysql_IStore
                 'user'=>'root',
                 'password'=>'',
                 'compressdata'=>false,
+                'addtobasedir'=>'',
             ),
             CfgPart::DESCRIPTIONS=>array(
                 'host'=>'mysql server host name',
                 'port'=>'mysql server port number',
                 'user'=>'mysql user name',
                 'password'=>'mysql user password',
-                'dbname'=>'database to backup',
+                'dbname'=><<<TXT
+Database to backup if string or array of databases to backup.
+If array it may be string expressing name of db or array overriding default settings.
+Allowed settings are dbname (array key is used if not provided), addtobasedir, compressdata.
+Consult examples in examples/mysql folder.',
+TXT
+                ,
+                'dbname.sql'=>"SQL select which will replace dbname with multiple values (eg. SELECT schema_name as dbname, false as compressdata FROM `information_schema`.`schemata` WHERE schema_name not in ('mysql', 'informa_schema'))",
+                'addtobasedir'=>'',
                 'compressdata'=>'compress data files on the fly',
             ),
             CfgPart::REQUIRED=>array('dbname')
         );
+
+        // add old options from Storage_Filesystem
+        //Core_Engine::array_merge_configOptions(parent::getConfigOptions(), $opt);
+        $optOld = parent::getConfigOptions();
+        foreach ($opt as $k=>&$o) {
+            if (array_key_exists($k, $optOld)) {
+                $o = Core_Engine::array_merge_recursive_distinct($optOld[$k], $o);
+            }
+        }
+        foreach ($optOld as $k=>$o) {
+            if (!array_key_exists($k, $opt)) {
+                $opt[$k] = $o;
+            }
+        }
+
+
 
         if (is_null($part)) {
             return $opt;
@@ -112,20 +142,72 @@ class Storage_Mysql extends Storage_Filesystem implements Storage_Mysql_IStore
         $this->_db->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false);
 
         $this->_driver = $this->_getBackupDriver();
-        $this->_driver->setDatabaseToBackup($this->_options['dbname']);
-        $this->_driver->setDataCompression($this->_options['compressdata']);
 
-        // check/clear target folder
-        // TODO check if it is empty and if we are allowed to delete it if not
-        $this->_clearFolder($this->_baseDir);
+        // build list of databases to backup
+        $dbname = $this->_options['dbname'];
+        $dbsToBackup = array();
+        if (is_string($dbname)) {
+            $dbsToBackup = array($dbname=>array(
+                'dbname'=>$dbname,
+                'addtobasedir'=>$this->_options['addtobasedir']
+            ));
+        } else {
+            foreach ($dbname as $k=>&$v) {
+                if (is_array($v)) {
+                    if (!array_key_exists('dbname', $v)) {
+                        $v['dbname'] = $k;
+                    }
+                } else {
+                    $v = array(
+                        'dbname'=>$v,
+                        'addtobasedir'=>$v
+                    );
+                }
+            }
+            $dbsToBackup = $dbname;
+        }
 
-        // prepare debug file if needed
-        $this->_debugFolder = $this->_baseDir.DIRECTORY_SEPARATOR."debug".DIRECTORY_SEPARATOR;
-        if ($this->_debugFolder) {
-            $this->_clearFolder($this->_debugFolder);
-            @mkdir($this->_debugFolder);
-            $f = fopen($this->_debugFolder."1.sql", "w");
-            fputs($f, <<<SQL
+        // fix missing defaults
+        foreach ($dbsToBackup as $dbname=>&$dbConfig) {
+            if (!array_key_exists('dbname', $dbConfig)) {
+                $dbConfig['dbname'] = $dbname;
+            }
+            if (!array_key_exists('compressdata', $dbConfig)) {
+                $dbConfig['compressdata'] = $this->_options['compressdata'];
+            }
+            if (!array_key_exists('addtobasedir', $dbConfig)) {
+                $dbConfig['addtobasedir'] = $dbname;
+            }
+            // TODO filter options
+        }
+
+        // backup database(s)
+        $originalBaseDir = $this->_baseDir;
+        unset($dbConfig);
+        foreach ($dbsToBackup as $dbConfig) {
+            $this->_baseDir = $originalBaseDir;
+
+            $this->_driver->setDatabaseToBackup($dbConfig['dbname']);
+            $this->_driver->setDataCompression($dbConfig['compressdata']);
+
+            if ($dbConfig['addtobasedir']) {
+                $this->_baseDir .= $dbConfig['addtobasedir'].DIRECTORY_SEPARATOR;
+                @mkdir($this->_baseDir);
+            }
+
+            // check/clear target folder
+            // TODO check if it is empty and if we are allowed to delete it if not
+            $this->_clearFolder($this->_baseDir);
+
+            // prepare debug file if needed
+            if (isset($this->_options['_debugFolder']) && $this->_options['_debugFolder']) { // undocumented config option
+                $this->_debugFolder = $this->_baseDir.DIRECTORY_SEPARATOR."debug".DIRECTORY_SEPARATOR;
+            }
+            if ($this->_debugFolder) {
+                $this->_clearFolder($this->_debugFolder);
+                @mkdir($this->_debugFolder);
+                $f = fopen($this->_debugFolder."1.sql", "w");
+                fputs($f, <<<SQL
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
@@ -137,19 +219,23 @@ class Storage_Mysql extends Storage_Filesystem implements Storage_Mysql_IStore
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 SQL
-            );
-            fclose($f);
+                );
+                fclose($f);
+            }
+
+            // retrieve all objects known in DB
+            $objects = $this->_driver->listAvailableObjectsToBackup();
+            // TODO filter objects which should be backed up
+
+            // execute backup of DB objects
+            $this->_driver->doBackup($this);
+            $this->_driver->addRestoreScript($this->_baseDir);
         }
 
-        // retrieve all objects known in DB
-        $objects = $this->_driver->listAvailableObjectsToBackup();
-        // TODO filter objects which should be backed up
+        $this->_baseDir = $originalBaseDir;
 
-        // execute backup of DB objects
-        $this->_driver->doBackup($this);
-        $this->_driver->addRestoreScript($this->_baseDir);
 
-        $this->_out->stop("ok");
+        // $this->_out->stop("ok");
 
         return true;
     }

@@ -326,6 +326,7 @@ FROM my_table;
             } else {
                     $f = fopen($fn, "w");
             }
+            // TODO handle error opening file
             $this->_tableDataToCsv($def, $f);
             fclose($f);
         }

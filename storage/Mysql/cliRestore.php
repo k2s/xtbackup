@@ -19,8 +19,8 @@ try {
         'drop-db' => array('switch' => array('drop-db'), 'type' => GETOPT_SWITCH, 'help' => 'will drop DB if exists'),
         'no-data' => array('switch' => array('no-data'), 'type' => GETOPT_SWITCH, 'help' => 'skip data import'),
         'create-index' => array('switch' => array('create-index'), 'type' => GETOPT_VAL, 'default'=>'before', 'help' => '(before|after) data load'),
-        'filter-ext' => array('switch' => array('F', 'filter-ext'), 'type' => GETOPT_VAL, 'help' => ''),
-        'clone-to' => array('switch' => array('F', 'filter-ext'), 'type' => GETOPT_VAL, 'help' => 'provide folder where you want to copy backup data, filter will be applied, if value ends with zip data will be compressed'),
+        'filter-ext' => array('switch' => array('F', 'filter-ext'), 'type' => GETOPT_VAL, 'help' => 'external command which returns 1 if object action should be processes'),
+        'clone-to' => array('switch' => array('C', 'clone-to'), 'type' => GETOPT_VAL, 'help' => 'provide folder where you want to copy backup data, filter will be applied, if value ends with zip data will be compressed'),
         'decompress-only' => array('switch' => array('do', 'decompress-only'), 'type' => GETOPT_SWITCH, 'help' => 'decompress data files only'),
         'decompress-folder' => array('switch' => array('df', 'decompress-folder'), 'type' => GETOPT_VAL, 'help' => 'if data have to be uncompressed it will happen into data folder, you may change this with this option'),
         'decompress-action' => array('switch' => array('da', 'decompress-action'), 'type' => GETOPT_VAL, 'default'=>'delete', 'help' => <<<TXT
@@ -120,6 +120,7 @@ class RestoreMysql
 
     const VALIDATE_RESTORE = 0;
     const VALIDATE_DECOMPRESS = 1;
+    const VALIDATE_CLONE = 2;
 
     public function __construct($backupFolder, $opts)
     {
@@ -163,9 +164,42 @@ class RestoreMysql
             return;
         }
 
+        // validate parameters for clone process
+
+        if ($action==self::VALIDATE_CLONE) {
+            return;
+        }
+
+        // validate parameters for restore process
         if (!in_array($opts['create-index'], array("before", "after"))) {
             throw new Exception("Invalid value passed to create-index option.");
         }
+
+        if ($opts['filter-ext']) {
+            // try external filter response
+            if (123!=$this->_filterExt("test", "test")) {
+                throw new Exception("External filter didn't returned value '123' for action 'test'. Fix the filter program.");
+            }
+        }
+    }
+
+    protected function _filterExt($action, $objName, $cmd=null)
+    {
+        if (is_null($cmd)) {
+            $cmd = $this->_opts['filter-ext'];
+        }
+        if (!$cmd) {
+            return true;
+        }
+
+        $cmd .= " $action $objName";
+        $output = $ret = null;
+        exec($cmd, $output, $ret);
+        if ($output) {
+            echo "Error output from external filter:".PHP_EOL.implode(PHP_EOL, $output);
+        }
+
+        return $ret;
     }
 
     public function getOpts()
@@ -268,54 +302,54 @@ SQL;
 
         // create users
         $log->start("USERS create");
-        $this->execSqlFromFolder($folder."users/");
+        $this->execSqlFromFolder("users");
 
         // create functions
         $log->start("FUNCTIONS create");
-        $this->execSqlFromFolder($folder."functions/");
+        $this->execSqlFromFolder("functions");
 
         // create tables
         $log->start("TABLES create");
-        $this->execSqlFromFolder($folder."tables/");
+        $this->execSqlFromFolder("tables");
 
         if ($opts['create-index']=="before") {
             // create index
             $log->start("INDEXES create");
-            $this->execSqlFromFolder($folder."indexes/");
+            $this->execSqlFromFolder("indexes");
         }
 
         // import data
         if (!$opts['no-data']) {
             // TODO detect if mysql server is on localhost
             $log->start("DATA load (local server)");
-            $this->importDataFromFolderToLocalServer($folder."data/");
+            $this->importDataFromFolderToLocalServer("data");
         }
 
         if ($opts['create-index']=="after") {
             // create index
             $log->start("INDEXES create");
-            $this->execSqlFromFolder($folder."indexes/");
+            $this->execSqlFromFolder("indexes");
         }
 
         // create references
         $log->start("REFERENCES create");
-        $this->execSqlFromFolder($folder."refs/");
+        $this->execSqlFromFolder("refs");
 
         // create views
         $log->start("VIEWS create");
-        $this->execSqlFromFolder($folder."views/", true);
+        $this->execSqlFromFolder("views", true);
 
         // create procedures
         $log->start("PROCEDURES create");
-        $this->execSqlFromFolder($folder."procedures/");
+        $this->execSqlFromFolder("procedures");
 
         // create triggers
         $log->start("TRIGGERS create");
-        $this->execSqlFromFolder($folder."triggers/");
+        $this->execSqlFromFolder("triggers");
 
         // create grants
         $log->start("GRANTS apply");
-        $this->execSqlFromFolder($folder."grants/");
+        $this->execSqlFromFolder("grants");
 
         /*
         // finish import
@@ -479,14 +513,21 @@ SQL
         }
     }
 
-    function execSqlFromFolder($path, $tryRepeat=false)
+    function execSqlFromFolder($subPath, $tryRepeat=false)
     {
+        $path = $this->_backupFolder.$subPath.DIRECTORY_SEPARATOR;
         $repeat = array();
         if (file_exists($path) && false!==($handle = opendir($path))) {
             while (false !== ($fn = readdir($handle))) {
                 if ($fn!="." && $fn!="..") {
                     $fullFn = $path.$fn;
-                    $task = $this->_log->subtask()->start("apply '$fn'");
+
+                    if (1!==$this->_filterExt($subPath, $fn)) {
+                        $task = $this->_log->subtask()->log("skip '$fn' because of external filter");
+                        continue;
+                    }
+
+                    $task = $this->_log->subtask()->start("$subPath: apply '$fn'");
                     $sql = file_get_contents($fullFn);
                     try {
                         $this->_db->exec($sql);
@@ -624,6 +665,11 @@ class Log
         //$this->_echo();
         $task = new Log($this->_doEcho, $this->_taskLevel+1);
         return $task;
+    }
+
+    public function log($message)
+    {
+        echo $this->_prefix.$message.PHP_EOL;
     }
 
     protected function _echo()

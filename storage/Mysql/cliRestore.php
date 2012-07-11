@@ -18,6 +18,9 @@ try {
         'database' => array('switch' => array('D', 'database'), 'type' => GETOPT_VAL, 'help' => 'target database name'),
         'drop-db' => array('switch' => array('drop-db'), 'type' => GETOPT_SWITCH, 'help' => 'will drop DB if exists'),
         'no-data' => array('switch' => array('no-data'), 'type' => GETOPT_SWITCH, 'help' => 'skip data import'),
+        'create-index' => array('switch' => array('create-index'), 'type' => GETOPT_VAL, 'default'=>'before', 'help' => '(before|after) data load'),
+        'filter-ext' => array('switch' => array('F', 'filter-ext'), 'type' => GETOPT_VAL, 'help' => ''),
+        'clone-to' => array('switch' => array('F', 'filter-ext'), 'type' => GETOPT_VAL, 'help' => 'provide folder where you want to copy backup data, filter will be applied, if value ends with zip data will be compressed'),
         'decompress-only' => array('switch' => array('do', 'decompress-only'), 'type' => GETOPT_SWITCH, 'help' => 'decompress data files only'),
         'decompress-folder' => array('switch' => array('df', 'decompress-folder'), 'type' => GETOPT_VAL, 'help' => 'if data have to be uncompressed it will happen into data folder, you may change this with this option'),
         'decompress-action' => array('switch' => array('da', 'decompress-action'), 'type' => GETOPT_VAL, 'default'=>'delete', 'help' => <<<TXT
@@ -159,6 +162,10 @@ class RestoreMysql
         if ($action==self::VALIDATE_DECOMPRESS) {
             return;
         }
+
+        if (!in_array($opts['create-index'], array("before", "after"))) {
+            throw new Exception("Invalid value passed to create-index option.");
+        }
     }
 
     public function getOpts()
@@ -271,6 +278,12 @@ SQL;
         $log->start("TABLES create");
         $this->execSqlFromFolder($folder."tables/");
 
+        if ($opts['create-index']=="before") {
+            // create index
+            $log->start("INDEXES create");
+            $this->execSqlFromFolder($folder."indexes/");
+        }
+
         // import data
         if (!$opts['no-data']) {
             // TODO detect if mysql server is on localhost
@@ -278,9 +291,11 @@ SQL;
             $this->importDataFromFolderToLocalServer($folder."data/");
         }
 
-        // create index
-        $log->start("INDEXES create");
-        $this->execSqlFromFolder($folder."indexes/");
+        if ($opts['create-index']=="after") {
+            // create index
+            $log->start("INDEXES create");
+            $this->execSqlFromFolder($folder."indexes/");
+        }
 
         // create references
         $log->start("REFERENCES create");
@@ -416,13 +431,23 @@ SQL;
                     }
 
                     $fn = basename($fullFn);
-                    echo "import data to table '$fn' from file '$fullFn'\n";
+
                     if ($truncate) {
+                        $task = $this->_log->subtask()->start("truncating data in table '$fn'");
                         $this->_db->exec("TRUNCATE TABLE `$fn`");
+                        $task->end();
                     }
 
+                    $task = $this->_log->subtask()->start("import data to table '$fn' from file '$fullFn'");
                     // TODO LINES TERMINATED BY should maybe be configurable on command line or stored in/db/_config
-                    $this->_db->exec("LOAD DATA INFILE '$fullFn' INTO TABLE `$fn` CHARACTER SET UTF8 LINES TERMINATED BY '\r\n';");
+                    // ALTER TABLE TABLE_NAME DISABLE KEYS; LOAD DATA INFILE ... ; ALTER TABLE TABLE_NAME ENABLE KEYS;
+                    $this->_db->exec(<<<SQL
+ALTER TABLE `$fn` DISABLE KEYS;
+LOAD DATA INFILE '$fullFn' INTO TABLE `$fn` CHARACTER SET UTF8 LINES TERMINATED BY '\r\n';
+ALTER TABLE `$fn` ENABLE KEYS;
+SQL
+                    );
+                    $task->end();
 
                     // maybe delete some files after import
                     $this->_handleCompressedFileAction($afterAction);
@@ -461,10 +486,12 @@ SQL;
             while (false !== ($fn = readdir($handle))) {
                 if ($fn!="." && $fn!="..") {
                     $fullFn = $path.$fn;
+                    $task = $this->_log->subtask()->start("apply '$fn'");
                     $sql = file_get_contents($fullFn);
                     try {
                         $this->_db->exec($sql);
                     } catch (Exception $e) {
+                        $task->end();
                         if ($tryRepeat) {
                             if (!array_key_exists($fullFn, $repeat)) {
                                 $repeat[$fullFn] = array($e);
@@ -475,12 +502,14 @@ SQL;
                             throw new Exception("ERROR: in file '$fullFn'" , null, $e);
                         }
                     }
+                    $task->end();
                 }
             }
             closedir($handle);
         }
 
         if ($repeat) {
+            //$this->_log->write("repeating with ...");
             $this->execSqlFromArray($repeat);
         }
 
@@ -572,24 +601,35 @@ class Log
     protected $_start;
     protected $_text = false;
     protected $_doEcho;
+    protected $_taskLevel = 0;
+    protected $_prefix = "";
 
-    public function __construct($echo)
+    public function __construct($echo, $taskLevel=0)
     {
         $this->_doEcho = $echo;
+        $this->_taskLevel = $taskLevel;
+        $this->_prefix = str_repeat("\t", $this->_taskLevel);
     }
 
     public function __destruct()
     {
-        if ($this->_text!==false) {
+        if ($this->_text!==false && $this->_taskLevel==0) {
             echo '!!! incorrect log shutdown'.PHP_EOL;
             echo $this->_text.' ... duration '.$this->get().' seconds'.PHP_EOL;
         }
     }
 
+    public function subtask()
+    {
+        //$this->_echo();
+        $task = new Log($this->_doEcho, $this->_taskLevel+1);
+        return $task;
+    }
+
     protected function _echo()
     {
         if ($this->_doEcho && $this->_text!==false) {
-            echo $this->_text.' ... duration '.$this->get().' seconds'.PHP_EOL;
+            echo $this->_prefix.$this->_text.' ... duration '.$this->get().' seconds'.PHP_EOL;
         }
         $this->_text = false;
     }
@@ -601,8 +641,10 @@ class Log
         $this->_text = $text;
 
         if ($echoOnStart && $this->_doEcho && $this->_text!==false) {
-            echo $this->_text.' ... START'.PHP_EOL;
+            echo $this->_prefix.$this->_text.' ... START'.PHP_EOL;
         }
+
+        return $this;
     }
 
     function end()

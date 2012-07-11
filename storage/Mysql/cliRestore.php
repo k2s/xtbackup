@@ -13,6 +13,7 @@ try {
         'password' => array('switch' => array('p', 'password'), 'type' => GETOPT_VAL, 'default' => (string) '', 'help' => 'mysql user password'),
         'host' => array('switch' => array('h', 'host'),'type' => GETOPT_VAL, 'default' => 'localhost', 'help'=>'mysql server host name'),
         'port' => array('switch' => array('P', 'port'), 'type' => GETOPT_VAL, 'default'=>3306, 'help' => 'mysql server port number'),
+        'socket' => array('switch' => array('S', 'socket'), 'type' => GETOPT_VAL, 'help' => 'mysql server port number'),
 //        'directory' => array('switch' => array('d', 'directory'), 'type' => GETOPT_VAL, 'help' => 'directory with backup data'),
         'database' => array('switch' => array('D', 'database'), 'type' => GETOPT_VAL, 'help' => 'target database name'),
         'drop-db' => array('switch' => array('drop-db'), 'type' => GETOPT_SWITCH, 'help' => 'will drop DB if exists'),
@@ -53,6 +54,7 @@ if ($opts['help']) {
 $folder = "";
 if (count($opts['cmdline'])!=1) {
     help($options, "ERROR: you have to specify backup directory");
+    exit(RestoreMysql::RETCODE_PARAM_ERROR);
 } else {
     $folder = $opts['cmdline'][0];
 }
@@ -90,6 +92,7 @@ class RestoreMysql
 {
     const RETCODE_OK = 0;
     const RETCODE_USER_CANCEL = 1;
+    const RETCODE_PARAM_ERROR = 2;
 
     /**
      * @var array
@@ -181,9 +184,16 @@ class RestoreMysql
     protected function _connectMysql()
     {
         /** connect to DB **/
-        $this->_log->start("DB connection");
+        $this->_log->start("establishing DB connection");
+        if ($this->_opts['socket']) {
+            // connect over socket
+            $dsn = "mysql:unix_socket=".$this->_opts['socket'].";dbname=mysql";
+        } else {
+            // connect over TCP/IP
+            $dsn = "mysql:host=".$this->_opts['host'].";port=".$this->_opts['port'].";dbname=mysql";
+        }
         $this->_db = new PDO(
-            "mysql:host=localhost;dbname=mysql",
+            $dsn,
             $this->_opts['user'],
             $this->_opts['password'],
             array(
@@ -399,14 +409,14 @@ SQL;
         if (file_exists($path) && false!==($handle = opendir($path))) {
             while (false !== ($fn = readdir($handle))) {
                 if ($fn!="." && $fn!="..") {
-                    $fullFn = $path.$fn;
+                    $fullFn = realpath($path.$fn);
                     if (false===($afterAction = $this->_handleCompressedFile($fullFn))) {
                         // skip this file
                         continue;
                     }
 
                     $fn = basename($fullFn);
-                    echo "import data to table '$fn'\n";
+                    echo "import data to table '$fn' from file '$fullFn'\n";
                     if ($truncate) {
                         $this->_db->exec("TRUNCATE TABLE `$fn`");
                     }

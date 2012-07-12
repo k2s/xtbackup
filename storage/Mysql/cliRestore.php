@@ -72,6 +72,12 @@ if ($opts['decompress-only']) {
     die($restore->getReturnCode());
 }
 
+if ($opts['clone-to']) {
+    $restore->cloneTo();
+    // end with return code
+    die($restore->getReturnCode());
+}
+
 /** prompt if to continue **/
 if (!$opts['force']) {
     echo "do you want to start restore (y<enter>) ?";
@@ -246,6 +252,77 @@ class RestoreMysql
                 PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8"
             )
         );
+        $this->_log->end();
+    }
+
+    public static function tildeToHome(&$o)
+    {
+        $s = substr($o, 0, 2);
+        if ($s=="~/" || $s=="~\\") {
+            $o = getenv("HOME").substr($o, 1);
+        }
+    }
+
+    public function cloneTo()
+    {
+        $this->_log->start("cloning backup data");
+
+        $this->validateOpts($this->_opts, self::VALIDATE_CLONE);
+
+        $path = $this->_backupFolder;
+        $dstFolder = ltrim($this->_opts['clone-to'], "/\\").DIRECTORY_SEPARATOR;
+        self::tildeToHome($dstFolder);
+        @mkdir($dstFolder, 0777, true);
+
+        // check that the target folder is empty
+        $handle = opendir($dstFolder);
+        $isEmpty = true;
+        while (false !== ($fn = readdir($handle))) {
+            if ($fn!="." && $fn!="..") {
+                $isEmpty = false;
+                break;
+            }
+        }
+        closedir($handle);
+        if (!$isEmpty) {
+            throw new Exception("Folder where backup data should be cloned has to be empty. ('$dstFolder')");
+        }
+
+        // copy files
+        if (file_exists($path) && false!==($handle = opendir($path))) {
+            while (false !== ($subPath = readdir($handle))) {
+                if (is_file($path.$subPath)) {
+                    // restore support files
+                    copy($path.$subPath, $dstFolder.$subPath);
+                } elseif ($subPath!="." && $subPath!="..") {
+                    // actions
+                    @mkdir($dstFolder . $subPath, 0777, true);
+                    if (false!==($h2 = opendir($path.$subPath))) {
+                        while (false !== ($fn = readdir($h2))) {
+                            // loop files/objects
+                            $fullFn = $path.$subPath.DIRECTORY_SEPARATOR.$fn;
+                            if ($subPath=="." || $subPath==".." || !is_file($fullFn)) {
+                                // nothing to do
+                                continue;
+                            }
+
+                            if (1!==$this->_filterExt($subPath, $fn)) {
+                                $task = $this->_log->subtask()->log("$subPath: skip '$fn' because of external filter");
+                                continue;
+                            }
+
+                            $dstFn = $dstFolder . $subPath . DIRECTORY_SEPARATOR . $fn;
+                            $task = $this->_log->subtask()->start("$subPath: clone '$fn' to '$dstFn'");
+                            copy($fullFn, $dstFn);
+                            $task->end();
+                        }
+                    }
+                    closedir($h2);
+                }
+            }
+            closedir($handle);
+        }
+
         $this->_log->end();
     }
 
@@ -461,7 +538,7 @@ SQL;
                 if ($fn!="." && $fn!="..") {
 
                     if (1!==$this->_filterExt($subPath, $fn)) {
-                        $task = $this->_log->subtask()->log("skip '$fn' because of external filter");
+                        $task = $this->_log->subtask()->log("$subPath: skip '$fn' because of external filter");
                         continue;
                     }
 

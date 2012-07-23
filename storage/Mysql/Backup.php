@@ -142,6 +142,7 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
     {
         // script DB creation
         $def = $this->_db->query("show create DATABASE `{$this->_dbName}`;")->fetchColumn(1);
+        $def = substr($def, 0, 16).'IF NOT EXISTS '.substr($def, 16);
         $store->storeDbObject(self::KIND_DB, "_name", $this->_dbName);
         $store->storeDbObject(self::KIND_DB, "_create", $def);
 

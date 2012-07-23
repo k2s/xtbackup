@@ -18,6 +18,20 @@ try {
         'database' => array('switch' => array('D', 'database'), 'type' => GETOPT_VAL, 'help' => 'target database name'),
         'drop-db' => array('switch' => array('drop-db'), 'type' => GETOPT_SWITCH, 'help' => 'will drop DB if exists'),
         'no-data' => array('switch' => array('no-data'), 'type' => GETOPT_SWITCH, 'help' => 'skip data import'),
+        'actions' => array('switch' => array('a', 'actions'), 'type' => GETOPT_VAL, 'default'=>'u,f,t,i,d,r,v,p,tr,g', 'help' => <<<TXT
+restore actions to execute (default is u,f,t,i,d,r,v,p,tr,g):
+u - users
+f - functions
+t - structure of tables
+i - indexes
+d - table data
+r - references
+v - views
+p - procedures
+tr- triggers
+g - permission grants
+TXT
+        ),
         'create-index' => array('switch' => array('create-index'), 'type' => GETOPT_VAL, 'default'=>'before', 'help' => '(before|after) data load'),
         'filter-ext' => array('switch' => array('F', 'filter-ext'), 'type' => GETOPT_VAL, 'help' => 'external command which returns 1 if object action should be processes'),
         'clone-to' => array('switch' => array('C', 'clone-to'), 'type' => GETOPT_VAL, 'help' => 'provide folder where you want to copy backup data, filter will be applied, if value ends with zip data will be compressed'),
@@ -60,6 +74,37 @@ if (count($opts['cmdline'])!=1) {
     exit(RestoreMysql::RETCODE_PARAM_ERROR);
 } else {
     $folder = $opts['cmdline'][0];
+}
+
+// decode actions
+$actionList = array(
+    'u'=>'users',
+    'f'=>'functions',
+    't'=>'tables',
+    'i'=>'indexes',
+    'd'=>'data',
+    'r'=>'refs',
+    'v'=>'views',
+    'p'=>'procedures',
+    'tr'=>'triggers',
+    'g'=>'grants'
+);
+// 'u','f','t','i','d','r','v','p','tr','g'
+$origActions = $opts['actions'];
+$opts['actions'] = explode(",", strtolower($opts['actions']));
+$wrong = array_diff($opts['actions'], array_keys($actionList));
+if (count($wrong)) {
+    if (count($wrong)==1) {
+        help($options, "ERROR: parameter value '$origActions' contains wrong value: ".implode("", $wrong));
+    } else {
+        help($options, "ERROR: parameter value '$origActions' contains wrong values: ".implode(", ", $wrong));
+    }
+    exit(RestoreMysql::RETCODE_PARAM_ERROR);
+}
+$opts['actions'] = array_flip(array_intersect_key($actionList, array_flip($opts['actions'])));
+if ($opts['no-data']) {
+    // another way how to dissable data import
+    unset($opts['actions']['data']);
 }
 
 // object with main restore logic
@@ -195,7 +240,7 @@ class RestoreMysql
             $cmd = $this->_opts['filter-ext'];
         }
         if (!$cmd) {
-            return true;
+            return 1;
         }
 
         $cmd .= " $action $objName";
@@ -296,6 +341,10 @@ class RestoreMysql
                     copy($path.$subPath, $dstFolder.$subPath);
                 } elseif ($subPath!="." && $subPath!="..") {
                     // actions
+                    if (!array_key_exists($subPath, $this->_opts['actions'])) {
+                        // not configured to be processed in --actions
+                        continue;
+                    }
                     @mkdir($dstFolder . $subPath, 0777, true);
                     if (false!==($h2 = opendir($path.$subPath))) {
                         while (false !== ($fn = readdir($h2))) {
@@ -396,7 +445,7 @@ SQL;
         }
 
         // import data
-        if (!$opts['no-data']) {
+        if (array_key_exists("data", $opts['actions'])) {
             // TODO detect if mysql server is on localhost
             $log->start("DATA load (local server)");
             $this->importDataFromFolderToLocalServer("data");
@@ -597,6 +646,9 @@ SQL
 
     function execSqlFromFolder($subPath, $tryRepeat=false)
     {
+        if (!array_key_exists($subPath, $this->_opts['actions'])) {
+            return;
+        }
         $path = $this->_backupFolder.$subPath.DIRECTORY_SEPARATOR;
         $repeat = array();
         if (file_exists($path) && false!==($handle = opendir($path))) {

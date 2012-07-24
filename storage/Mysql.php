@@ -57,6 +57,7 @@ class Storage_Mysql extends Storage_Filesystem implements Storage_Mysql_IStore
                 'password'=>'',
                 'compressdata'=>false,
                 'addtobasedir'=>'',
+                'rotate'=>array('days'=>0, 'weeks'=>0, 'months'=>0),
             ),
             CfgPart::DESCRIPTIONS=>array(
                 'host'=>'mysql server host name',
@@ -75,6 +76,9 @@ TXT
                 'dbname.sql'=>"SQL select which will replace dbname with multiple values (eg. SELECT schema_name as dbname, false as compressdata FROM `information_schema`.`schemata` WHERE schema_name not in ('mysql', 'information_schema'))",
                 'addtobasedir'=>'',
                 'compressdata'=>'compress data files on the fly',
+                'rotate.days'=>'for how many days should backups be kept',
+                'rotate.weeks'=>'for how many weeks should backups be kept',
+                'rotate.months'=>'for how many months should backups be kept',
             ),
             CfgPart::REQUIRED=>array('dbname')
         );
@@ -211,6 +215,12 @@ TXT
             if (!array_key_exists('addtobasedir', $dbConfig)) {
                 $dbConfig['addtobasedir'] = $dbConfig['dbname'];
             }
+            if (!array_key_exists('rotate', $dbConfig)) {
+                $dbConfig['rotate'] = $this->_options['rotate'];
+            } else {
+                $dbConfig['rotate'] = array_merge($this->_options['rotate'], $dbConfig['rotate']);
+            }
+
             // TODO filter options
         }
 
@@ -277,6 +287,7 @@ SQL
         $this->_baseDir = $originalBaseDir;
 
         $this->_out->logNotice("mysql backup finished");
+        $this->_out->logNotice("high compression: 7za a -t7z -mmem=512m -m0=PPMd ../file.7z ".$this->_baseDir."*");
 
         return true;
     }

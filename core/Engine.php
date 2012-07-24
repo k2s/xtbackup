@@ -288,13 +288,15 @@ class Core_Engine
         }
 
         // apply hints
-        foreach ($hints as $key=>$hint) {
-            if (array_key_exists($key, $options)) {
-                if (isset($hint[CfgPart::HINT_TYPE])) {
-                    switch ($hint[CfgPart::HINT_TYPE]) {
-                        case CfgPart::TYPE_PATH:
-                            self::tildeToHome($options[$key]);
-                            break;
+        if ($hints) {
+            foreach ($hints as $key=>$hint) {
+                if (array_key_exists($key, $options)) {
+                    if (isset($hint[CfgPart::HINT_TYPE])) {
+                        switch ($hint[CfgPart::HINT_TYPE]) {
+                            case CfgPart::TYPE_PATH:
+                                self::tildeToHome($options[$key]);
+                                break;
+                        }
                     }
                 }
             }

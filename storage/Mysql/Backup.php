@@ -181,6 +181,7 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
      */
     protected function _backupDb($store)
     {
+        $this->_out->logNotice("script database ... '{$this->_dbName}'");
         // script DB creation
         $def = $this->_db->query("show create DATABASE `{$this->_dbName}`;")->fetchColumn(1);
         $def = substr($def, 0, 16).'IF NOT EXISTS '.substr($def, 16);
@@ -205,6 +206,7 @@ TXT
                 // we store multiple informations about triggers
                 $def = $def[0];
             }
+            $this->_out->logNotice("backup '$kind' ... '$def'");
             $sql = $this->_db->query($cmd." `{$this->_dbName}`.`$def`")->fetchColumn($colName);
             $security = $this->_removeSecurity($kind, $sql);
             // TODO store definer

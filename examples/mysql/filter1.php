@@ -1,6 +1,7 @@
 <?php
-$action = $argv[1];
-$objectName = $argv[2];
+$dbName = $argv[1];
+$action = $argv[2];
+$objectName = $argv[3];
 
 switch ($action) {
     case "test":

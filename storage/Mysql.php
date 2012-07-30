@@ -58,6 +58,7 @@ class Storage_Mysql extends Storage_Filesystem implements Storage_Mysql_IStore
                 'compressdata'=>false,
                 'addtobasedir'=>'',
                 'rotate'=>array('days'=>0, 'weeks'=>0, 'months'=>0),
+                'filter-ext'=>false,
             ),
             CfgPart::DESCRIPTIONS=>array(
                 'host'=>'mysql server host name',
@@ -79,6 +80,7 @@ TXT
                 'rotate.days'=>'for how many days should backups be kept',
                 'rotate.weeks'=>'for how many weeks should backups be kept',
                 'rotate.months'=>'for how many months should backups be kept',
+                'filter-ext'=>"specify external filter application like 'php -f filter.php -- '",
             ),
             CfgPart::REQUIRED=>array('dbname')
         );
@@ -220,8 +222,9 @@ TXT
             } else {
                 $dbConfig['rotate'] = array_merge($this->_options['rotate'], $dbConfig['rotate']);
             }
-
-            // TODO filter options
+            if (!array_key_exists('filter-ext', $dbConfig)) {
+                $dbConfig['filter-ext'] = $this->_options['filter-ext'];
+            }
         }
 
         // backup database(s)
@@ -232,17 +235,29 @@ TXT
 
             $this->_driver->setDatabaseToBackup($dbConfig['dbname']);
             $this->_driver->setDataCompression($dbConfig['compressdata']);
+            $this->_driver->setFilterExt($dbConfig['filter-ext']);
 
             if ($dbConfig['addtobasedir']) {
                 $this->_baseDir .= $dbConfig['addtobasedir'].DIRECTORY_SEPARATOR;
                 @mkdir($this->_baseDir);
             }
 
+            $doRotate = ($dbConfig['rotate']['days']+$dbConfig['rotate']['weeks']+$dbConfig['rotate']['months'])>0;
+            if ($doRotate) {
+                $doRotate = $this->_baseDir;
+                $this->_baseDir .= date("Ymd").DIRECTORY_SEPARATOR;
+                @mkdir($this->_baseDir);
+            }
+
             // check/clear target folder
             if (file_exists($this->_baseDir)) {
-                // TODO check if it is empty and if we are allowed to delete it if not
-                $this->_out->logWarning("removing existing content from backup folder '$this->_baseDir'");
-                $this->_clearFolder($this->_baseDir);
+                if ($doRotate) {
+                    $this->_out->logWarning("backup folder '$this->_baseDir' already exists, skipping");
+                } else {
+                    // TODO check if it is empty and if we are allowed to delete it if not
+                    $this->_out->logWarning("removing existing content from backup folder '$this->_baseDir'");
+                    $this->_clearFolder($this->_baseDir);
+                }
             }
 
             // prepare debug file if needed
@@ -282,6 +297,10 @@ SQL
             $this->_driver->doBackup($this);
             $this->_out->logNotice("adding restore script");
             $this->_driver->addRestoreScript($this->_baseDir);
+
+            if (false!==$doRotate) {
+                $this->_doRotation($doRotate, $dbConfig);
+            }
         }
 
         $this->_baseDir = $originalBaseDir;
@@ -290,6 +309,47 @@ SQL
         $this->_out->logNotice("high compression: 7za a -t7z -mmem=512m -m0=PPMd ../file.7z ".$this->_baseDir."*");
 
         return true;
+    }
+
+    protected function _doRotation($topFolder, $dbConfig)
+    {
+        foreach ($dbConfig['rotate'] as $time=>$count) {
+            $s[] = "$count $time";
+        }
+        $s = implode(", ", $s);
+        $this->_out->logNotice("rotate content of $topFolder (keep $s)");
+
+        $handle = opendir($topFolder);
+        $isEmpty = true;
+        while (false !== ($fn = readdir($handle))) {
+            if ($fn=="." || $fn=="..") {
+                continue;
+            }
+            $fullPath = $topFolder.DIRECTORY_SEPARATOR.$fn;
+            if (is_dir($fullPath)) {
+                // decode filename
+                $p = explode("-", $fn, 3);
+                $d = strtotime($p[1]);
+                switch (count($p)) {
+                    case 1:
+
+                        break;
+                    case 3:
+                        switch ($p[1]) {
+                            case 'week':
+                                break;
+                            case 'month':
+                                break;
+                            default:
+                                $this->_out->logWarning("rotate: wrong folder name $fn (unknown part '$p[1]')");
+                        }
+                        break;
+                    default:
+                        $this->_out->logWarning("rotate: wrong folder name $fn");
+                }
+            }
+        }
+        closedir($handle);
     }
 
     protected function _getBackupDriver()

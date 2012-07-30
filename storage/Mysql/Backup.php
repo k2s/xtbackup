@@ -13,9 +13,15 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
     protected $_compressDataFiles = false;
 
     /**
+     * Definition of external script to filter objects
+     * @var bool
+     */
+    protected $_filterExtDef = false;
+
+    /**
      * @var Output_Interface
      */
-    protected $out;
+    protected $_out;
 
     protected $_dbName;
 
@@ -73,6 +79,11 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
         $this->_compressDataFiles = $compressDataFiles;
     }
 
+    function setFilterExt($filterExtDefinition)
+    {
+        $this->_filterExtDef = $filterExtDefinition;
+    }
+
     function addRestoreScript($folder)
     {
         $src = dirname(__FILE__).DIRECTORY_SEPARATOR.'cliRestore.php';
@@ -102,6 +113,17 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
             $funcName = "_cache".ucfirst($kind);
             if (method_exists($this, $funcName)) {
                 $this->$funcName();
+
+                if ($this->_filterExtDef) {
+                    // apply external filter
+                    foreach ($this->_cachedObjectsToBackup[$kind] as $k=>$v) {
+                        if (1!==$this->_filterExt($kind, $v)) {
+                            $this->_out->logNotice("$kind: skip '$v' because of external filter");
+                            unset($this->_cachedObjectsToBackup[$kind][$k]);
+                            continue;
+                        }
+                    }
+                }
             } else {
                 $this->_out->logWarning("don't know of to build list of '$kind'.");
                 $this->_cachedObjectsToBackup[$kind] = array();
@@ -110,6 +132,25 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
         }
 
         return $this->_cachedObjectsToBackup[$kind];
+    }
+
+    protected function _filterExt($action, $objName, $cmd=null)
+    {
+        if (is_null($cmd)) {
+            $cmd = $this->_filterExtDef;
+        }
+        if (!$cmd) {
+            return 1;
+        }
+
+        $cmd .= $this->_dbName." $action $objName";
+        $output = $ret = null;
+        exec($cmd, $output, $ret);
+        if ($output) {
+            $this->_out->logError("Error output from external filter:".PHP_EOL.implode(PHP_EOL, $output));
+        }
+
+        return $ret;
     }
 
     public function removeObject($kind, $name)
@@ -145,6 +186,13 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
         $def = substr($def, 0, 16).'IF NOT EXISTS '.substr($def, 16);
         $store->storeDbObject(self::KIND_DB, "_name", $this->_dbName);
         $store->storeDbObject(self::KIND_DB, "_create", $def);
+        $def = $this->_db->query("SELECT date_format(now(), GET_FORMAT(DATETIME,'ISO'))")->fetchColumn(1);
+        $phpTime = date("c");
+        $store->storeDbObject(self::KIND_DB, "_time", <<<TXT
+script: $phpTime
+mysql: $def
+TXT
+        );
 
     }
     protected function _backupRefs($store) {}

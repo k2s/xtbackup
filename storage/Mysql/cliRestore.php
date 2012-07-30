@@ -243,7 +243,7 @@ class RestoreMysql
             return 1;
         }
 
-        $cmd .= " $action $objName";
+        $cmd .= $this->_opts['database'] . " $action $objName";
         $output = $ret = null;
         exec($cmd, $output, $ret);
         if ($output) {

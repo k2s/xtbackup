@@ -46,7 +46,7 @@ TXT
         ),
         'force' => array('switch' => array('f', 'force'), 'type' => GETOPT_SWITCH, 'help' => 'will not prompt user to approve restore'),
         'quite' => array('switch' => array('q', 'quite'), 'type' => GETOPT_SWITCH, 'help' => 'will not print messages'),
-        'help' => array('switch' => array('h', 'help'), 'type' => GETOPT_SWITCH, 'help' => 'display instruction how to use cli.php'),
+        'help' => array('switch' => array('?', 'help'), 'type' => GETOPT_SWITCH, 'help' => 'display instruction how to use cli.php'),
 /*        'action' => array('switch' => array('a', 'action'), 'type' => GETOPT_VAL, 'help' => 'what action to run'),
         'params' => array('switch' => 'p', 'type' => GETOPT_KEYVAL, 'help' => 'set request parameters'),
         'cronList' => array('switch' => array('l', 'cron-list'), 'type' => GETOPT_SWITCH, 'help' => 'list all actions marked for scheduling'),
@@ -488,11 +488,6 @@ SQL;
         $log->end();
 
     }
-    function importDataFromFolderToRemoteServer($path, $truncate=true)
-    {
-        die("not supported yet");
-    }
-
     public function decompressFile($srcFile, $dstFile)
     {
         echo "decompress $srcFile to $dstFile\n";
@@ -579,7 +574,18 @@ SQL;
 
     }
 
+    function importDataFromFolderToRemoteServer($path, $truncate=true)
+    {
+        return $this->importDataFromFolder(false, $path, $truncate);
+    }
+
+
     function importDataFromFolderToLocalServer($subPath, $truncate=true)
+    {
+        return $this->importDataFromFolder(true, $path, $truncate);
+    }
+
+    function importDataFromFolder($isLocalHost, $subPath, $truncate=true)
     {
         $path = $this->_backupFolder.$subPath.DIRECTORY_SEPARATOR;
         if (file_exists($path) && false!==($handle = opendir($path))) {
@@ -608,8 +614,9 @@ SQL;
                     $task = $this->_log->subtask()->start("import data to table '$fn' from file '$fullFn'");
                     // TODO LINES TERMINATED BY should maybe be configurable on command line or stored in/db/_config
                     // ALTER TABLE `$fn` DISABLE KEYS; ALTER TABLE `$fn` ENABLE KEYS;
+                    $local = $isLocalHost ? "" : "LOCAL";
                     $this->_db->exec(<<<SQL
-LOAD DATA INFILE '$fullFn' INTO TABLE `$fn` CHARACTER SET UTF8 LINES TERMINATED BY '\r\n';
+LOAD DATA $local INFILE '$fullFn' INTO TABLE `$fn` CHARACTER SET UTF8 LINES TERMINATED BY '\r\n';
 SQL
                     );
                     $task->end();

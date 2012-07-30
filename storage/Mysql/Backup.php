@@ -91,6 +91,23 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
         copy($src, $trg);
     }
 
+    function applyFilterToObjects()
+    {
+        // filter objects which should be backed up
+        if ($this->_filterExtDef) {
+            // apply external filter
+            foreach ($this->_cachedObjectsToBackup as $kind=>&$objects) {
+                foreach ($objects as $k=>$v) {
+                    if (1!==$this->_filterExt($kind, $v)) {
+                        $this->_out->logNotice("$kind: skip '$v' because of external filter");
+                        unset($objects[$k]);
+                        continue;
+                    }
+                }
+            }
+        }
+    }
+
     function listAvailableObjectsToBackup($kind=false)
     {
         /*if ($kind==self::KIND_TABLES || $kind==self::KIND_DATA) {
@@ -113,17 +130,6 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
             $funcName = "_cache".ucfirst($kind);
             if (method_exists($this, $funcName)) {
                 $this->$funcName();
-
-                if ($this->_filterExtDef) {
-                    // apply external filter
-                    foreach ($this->_cachedObjectsToBackup[$kind] as $k=>$v) {
-                        if (1!==$this->_filterExt($kind, $v)) {
-                            $this->_out->logNotice("$kind: skip '$v' because of external filter");
-                            unset($this->_cachedObjectsToBackup[$kind][$k]);
-                            continue;
-                        }
-                    }
-                }
             } else {
                 $this->_out->logWarning("don't know of to build list of '$kind'.");
                 $this->_cachedObjectsToBackup[$kind] = array();

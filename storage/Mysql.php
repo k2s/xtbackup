@@ -285,8 +285,8 @@ SQL
             }
 
             // retrieve all objects known in DB
-            $objects = $this->_driver->listAvailableObjectsToBackup();
-            // TODO filter objects which should be backed up
+            $this->_driver->listAvailableObjectsToBackup();
+            $this->_driver->applyFilterToObjects();
 
             // execute backup of DB objects
             $msg = "creating backup of DB '$dbConfig[dbname]' to folder '$this->_baseDir'";

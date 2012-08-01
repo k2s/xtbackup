@@ -193,7 +193,9 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
         $def = substr($def, 0, 16).'IF NOT EXISTS '.substr($def, 16);
         $store->storeDbObject(self::KIND_DB, "_name", $this->_dbName);
         $store->storeDbObject(self::KIND_DB, "_create", $def);
-        $def = $this->_db->query("SELECT date_format(now(), GET_FORMAT(DATETIME,'ISO'))")->fetchColumn(1);
+        $def = $this->_db->query("SELECT UTC_TIMESTAMP()")->fetchColumn(0);
+        $def = strtotime($def."UTC");
+        $def = date("c", $def);
         $phpTime = date("c");
         $store->storeDbObject(self::KIND_DB, "_time", <<<TXT
 script: $phpTime

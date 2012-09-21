@@ -36,6 +36,7 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
     const KIND_TRIGGERS = 'triggers';
     const KIND_PROCEDURES = 'procedures';
     const KIND_GRANTS = 'grants';
+    const KIND_END = 'end';
 
     /**
      * Backup this DB objects types
@@ -53,6 +54,7 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
         self::KIND_TRIGGERS,
         self::KIND_PROCEDURES,
         self::KIND_GRANTS,
+        self::KIND_END,
     );
 
     protected $_cachedObjectsToBackup = array();
@@ -185,6 +187,25 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
      * @param Storage_Mysql_IStore $store
      * @return void
      */
+    protected function _backupEnd($store)
+    {
+        $def = $this->_db->query("SELECT UTC_TIMESTAMP()")->fetchColumn(0);
+        $def = strtotime($def."UTC");
+        $def = date("c", $def);
+        $phpTime = date("c");
+        $store->storeDbObject(self::KIND_DB, "_timeend", <<<TXT
+script: $phpTime
+mysql: $def
+TXT
+        );
+
+    }
+
+
+    /**
+     * @param Storage_Mysql_IStore $store
+     * @return void
+     */
     protected function _backupDb($store)
     {
         $this->_out->logNotice("script database ... '{$this->_dbName}'");
@@ -197,7 +218,7 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
         $def = strtotime($def."UTC");
         $def = date("c", $def);
         $phpTime = date("c");
-        $store->storeDbObject(self::KIND_DB, "_time", <<<TXT
+        $store->storeDbObject(self::KIND_DB, "_timestart", <<<TXT
 script: $phpTime
 mysql: $def
 TXT

@@ -44,7 +44,7 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
      */
     protected $_kindsToBackup = array(
         self::KIND_DB,
-        self::KIND_USERS,
+        // TODO self::KIND_USERS,
         self::KIND_FUNCTIONS,
         self::KIND_TABLES,
         self::KIND_DATA,
@@ -53,7 +53,7 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
         self::KIND_VIEWS,
         self::KIND_TRIGGERS,
         self::KIND_PROCEDURES,
-        self::KIND_GRANTS,
+        // TODO self::KIND_GRANTS,
         self::KIND_END,
     );
 
@@ -133,7 +133,7 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
             if (method_exists($this, $funcName)) {
                 $this->$funcName();
             } else {
-                $this->_out->logWarning("don't know of to build list of '$kind'.");
+                $this->_out->logWarning("don't know how to build list of '$kind'.");
                 $this->_cachedObjectsToBackup[$kind] = array();
             }
 
@@ -169,6 +169,11 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
     protected function _cacheDb()
     {
         $this->_cachedObjectsToBackup[self::KIND_DB] = array($this->_dbName);
+    }
+
+    protected function _cacheEnd()
+    {
+        $this->_cachedObjectsToBackup[self::KIND_END] = array();
     }
 
     function doBackup($store)

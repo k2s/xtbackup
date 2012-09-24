@@ -245,7 +245,7 @@ TXT
             $doRotate = ($dbConfig['rotate']['days']+$dbConfig['rotate']['weeks']+$dbConfig['rotate']['months'])>0;
             if ($doRotate) {
                 $doRotate = $this->_baseDir;
-                $this->_baseDir .= date("Ymd").DIRECTORY_SEPARATOR;
+                $this->_baseDir .= date("Y-m-d").DIRECTORY_SEPARATOR;
                 @mkdir($this->_baseDir);
             }
 
@@ -253,6 +253,8 @@ TXT
             if (file_exists($this->_baseDir)) {
                 if ($doRotate) {
                     $this->_out->logWarning("backup folder '$this->_baseDir' already exists, skipping");
+                    $this->_doRotation($doRotate, $dbConfig);
+                    continue;
                 } else {
                     // TODO check if it is empty and if we are allowed to delete it if not
                     $this->_out->logWarning("removing existing content from backup folder '$this->_baseDir'");
@@ -316,40 +318,137 @@ SQL
         foreach ($dbConfig['rotate'] as $time=>$count) {
             $s[] = "$count $time";
         }
-        $s = implode(", ", $s);
-        $this->_out->logNotice("rotate content of $topFolder (keep $s)");
+        $keepS = implode(", ", $s);
+        $this->_out->logNotice("rotate content of $topFolder (keep $keepS)");
 
+        $all = $index = array();
+        $topFolder = rtrim($topFolder, "/\\").DIRECTORY_SEPARATOR;
         $handle = opendir($topFolder);
-        $isEmpty = true;
         while (false !== ($fn = readdir($handle))) {
             if ($fn=="." || $fn=="..") {
                 continue;
             }
-            $fullPath = $topFolder.DIRECTORY_SEPARATOR.$fn;
+            $fullPath = $topFolder.$fn;
             if (is_dir($fullPath)) {
-                // decode filename
+                // check folder name
                 $p = explode("-", $fn, 3);
-                $d = strtotime($p[1]);
-                switch (count($p)) {
-                    case 1:
+                if (count($p)!=3) {
+                    $this->_out->logWarning("rotate: wrong folder name $fn, not possible to rotate");
+                    continue;
+                }
 
-                        break;
-                    case 3:
-                        switch ($p[1]) {
-                            case 'week':
-                                break;
-                            case 'month':
-                                break;
-                            default:
-                                $this->_out->logWarning("rotate: wrong folder name $fn (unknown part '$p[1]')");
-                        }
-                        break;
-                    default:
-                        $this->_out->logWarning("rotate: wrong folder name $fn");
+                // filename to date
+                $onDate = strtotime($fn);
+                $all[] = $onDate;
+                $year = date("Y", $onDate)*1000;
+
+                foreach ($dbConfig['rotate'] as $k=>$v) {
+                    switch ($k) {
+                        case 'days':
+                            $part = date("z", $onDate);
+                            break;
+                        case 'weeks':
+                            $part = date("w", $onDate);
+                            break;
+                        case 'months':
+                            $part = date("m", $onDate);
+                            break;
+                        default:
+                            $this->_out->logWarning("rotate: wrong config (unknown rotation part '$k')");
+                    }
+
+                    // add to index
+                    $part = $year+$part;
+                    if (!array_key_exists($k, $index)) {
+                        $index[$k] = array();
+                    }
+                    if (array_key_exists($part, $index[$k])) {
+                        $index[$k][$part] = max($index[$k][$part], $onDate);
+                    } else {
+                        $index[$k][$part] = $onDate;
+                    }
+
                 }
             }
         }
         closedir($handle);
+
+        // keep only folders which should be kept in $index
+        $keep = array();
+        foreach ($dbConfig['rotate'] as $k=>$v) {
+            $a = $index[$k];
+            $b = array();
+            krsort($a);
+            $i = 0;
+            foreach ($a as $nk=>$nv) {
+                $b[$nk] = $nv;
+                $i++;
+                if ($i>$v) {
+                    break;
+                }
+            }
+            $index[$k] = $b;
+            $keep = array_merge($keep, $index[$k]);
+        }
+        $remove = array_diff($all, $keep);
+
+        // save protocol
+        $p = array("Rotation protocol created on ".date("r"));
+        $p[] = "";
+        $p[] = "keep $keepS";
+        $p[] = "";
+        foreach ($all as $day) {
+            $s = array();
+            foreach (array('days', 'weeks', 'months') as $k) {
+                $for = array_search($day, $index[$k], true);
+                if (false!==$for) {
+                    $y = floor($for/1000);
+                    switch ($k) {
+                        case 'days':
+                            $s[] = sprintf("for day %d/%d", ($for-$y*1000), $y);
+                            break;
+                        case 'weeks':
+                            $s[] = sprintf("for week %d/%d", ($for-$y*1000), $y);
+                            break;
+                        case 'months':
+                            $s[] = sprintf("for month %d/%d", ($for-$y*1000), $y);
+                            break;
+                    }
+                }
+            }
+            if (count($s)) {
+                $p[] = "keep ".date("Y-m-d", $day)." as backup ".implode($s, ", ");
+            }
+        }
+        if (count($remove)) {
+            $p[] = "";
+            $p[] = "removing following folders:";
+            foreach ($remove as $fn) {
+                $p[] = $topFolder.date("Y-m-d", $fn);
+            }
+        }
+
+        file_put_contents($topFolder."rotation.log", implode($p, PHP_EOL));
+
+        // remove folders not in $index
+        foreach ($remove as $fn) {
+            $this->_rrmdir($topFolder.date("Y-m-d", $fn));
+            //echo $topFolder.date("Y-m-d", $fn).PHP_EOL;
+        }
+    }
+
+    protected function _rrmdir($dir)
+    {
+        if (is_dir($dir)) {
+             $objects = scandir($dir);
+             foreach ($objects as $object) {
+               if ($object != "." && $object != "..") {
+                 if (filetype($dir."/".$object) == "dir") $this->_rrmdir($dir."/".$object); else unlink($dir."/".$object);
+               }
+             }
+             reset($objects);
+             rmdir($dir);
+           }
     }
 
     protected function _getBackupDriver()

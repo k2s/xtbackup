@@ -243,9 +243,11 @@ TXT
             $this->_driver->setDataCompression($dbConfig['compressdata']);
             $this->_driver->setFilterExt($dbConfig['filter-ext']);
 
+            $createForced = false;
             if ($dbConfig['addtobasedir']) {
                 $this->_baseDir .= $dbConfig['addtobasedir'].DIRECTORY_SEPARATOR;
                 @mkdir($this->_baseDir);
+                $createForced = true;
             }
 
             $doRotate = ($dbConfig['rotate']['days']+$dbConfig['rotate']['weeks']+$dbConfig['rotate']['months'])>0;
@@ -253,17 +255,18 @@ TXT
                 $doRotate = $this->_baseDir;
                 $this->_baseDir .= date("Y-m-d").DIRECTORY_SEPARATOR;
                 @mkdir($this->_baseDir);
+                $createForced = true;
             }
 
             // check/clear target folder
-            if (file_exists($this->_baseDir)) {
-                if ($doRotate && file_exists($this->_baseDir.'db/_name')) {
+            if (!$createForced && file_exists($this->_baseDir)) {
+                if ($doRotate) {
                     // the folder contains valid backup so we are going only to rotate
                     $this->_out->logWarning("backup folder '$this->_baseDir' already exists, skipping");
                     $this->_doRotation($doRotate, $dbConfig);
                     continue;
                 } else {
-                    // TODO check if it is empty and if we are allowed to delete it if not
+                    // TODO check if it is empty and if we are allowed to delete it if not  && file_exists($this->_baseDir.'db/_name')
                     $this->_out->logWarning("removing existing content from backup folder '$this->_baseDir'");
                     $this->_clearFolder($this->_baseDir);
                 }
@@ -298,7 +301,7 @@ SQL
             $this->_driver->applyFilterToObjects();
 
             // execute backup of DB objects
-            $msg = "creating backup of DB '$dbConfig[dbname]' to folder '$this->_baseDir'";
+            $msg = "creating backup of DB '$dbConfig[dbname]@$dbConfig[host]' to folder '$this->_baseDir'";
             if ($dbConfig['compressdata']) {
                 $msg .= ", data will be online compressed";
             }

@@ -176,9 +176,12 @@ TXT
                 $opt['DBInstanceClass'] = $this->_options['dbinstanceclass'];
             }
             $rds->restore_db_instance_to_point_in_time($this->_options['dbinstance'], $tempName, $opt);
+            $dbInstanceName = $this->_options['dbinstance'];
+            $this->_out->logNotice("point in time restore of '$dbInstanceName' started and '$tempName' will be created");
         }
 
         // wait for readiness
+        $job = $this->_out->jobStart("waiting for temporary RDS instance '$tempName' to become 'available'");
         do {
              $response = $rds->describe_db_instances(
                 array('DBInstanceIdentifier'=>$tempName)
@@ -190,6 +193,7 @@ TXT
             }
             sleep(3);
         } while (true);
+        $this->_out->jobEnd($job, "ready");
 
         // configure and execute mysql backup
         $this->_mysql->setHost(
@@ -201,6 +205,7 @@ TXT
 
         if ($this->_options['droptemp']) {
             // drop temporary instance
+            $job = $this->_out->jobStart("droping temporary RDS instance '$tempName'");
             $response = $rds->delete_db_instance(
                 $tempName,
                 array(
@@ -208,12 +213,11 @@ TXT
                 )
             );
             if (!$response->isOK()) {
-                $this->_out->logError("It is not possible to start removal of temporary backup instance '$tempName'.");
+                $this->_out->jobEnd($job, "failed");
+            } else {
+                $this->_out->jobEnd($job, "started, not waiting for finish");
             }
         }
-
-
-        exit;
     }
 
     protected function _fixGet($o, $key)

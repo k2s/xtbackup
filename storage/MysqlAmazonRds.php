@@ -142,11 +142,14 @@ TXT
 
         //DBInstanceStatus
 
+        if ($this->_fixGet($instance, 'BackupRetentionPeriod')>0) {
+            throw new Core_StopException("You need to set BackupRetentionPeriod>0 on RDS instance. Otherwise use the MySql storage and not the M, the current engine is '$engine'.", "MysqlAmazonRdsInit");
+        }
 
-        //$instance->BackupRetentionPeriod
         if ($this->_fixGet($instance, 'Engine')!=="mysql") {
             throw new Core_StopException("RDS instances has to use MySql, the current engine is '$engine'.", "MysqlAmazonRdsInit");
         }
+
 
         if ($this->_options['tempname']) {
             $tempName = $this->_options['tempname'];

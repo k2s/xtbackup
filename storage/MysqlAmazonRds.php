@@ -141,8 +141,8 @@ TXT
         }
 
         //DBInstanceStatus
-
-        if ($this->_fixGet($instance, 'BackupRetentionPeriod')>0) {
+        $backupRetentionPeriod = $this->_fixGet($instance, 'BackupRetentionPeriod')*1;
+        if (! $backupRetentionPeriod>0) {
             throw new Core_StopException("You need to set BackupRetentionPeriod>0 on RDS instance. Otherwise use the MySql and not the MysqlAmazonRds storage class.", "MysqlAmazonRdsInit");
         }
 

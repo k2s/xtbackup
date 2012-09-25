@@ -109,7 +109,12 @@ class Storage_S3 implements Storage_Interface
 
         $job = $this->_out->jobStart("handshaking with Amazon S3");
         // TODO we need better AmazonS3 error handling
-        $this->_s3 = new AmazonS3($this->_options['key']['access'], $this->_options['key']['secret']);
+        $this->_s3 = new AmazonS3(
+            array(
+                 'key'    => $this->_options['key']['access'],
+                 'secret' => $this->_options['key']['secret']
+            )
+        );
         if (false == $this->_s3->if_bucket_exists($this->getBucket())) {
             $this->_out->jobEnd($job, "failed");
             throw new Core_StopException("S3 bucket not found: '{$this->getBucket()}'", "S3Init");

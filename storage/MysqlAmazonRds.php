@@ -200,10 +200,10 @@ TXT
         $this->_out->jobEnd($job, "ready");
 
         // configure and execute mysql backup
-        /*$this->_mysql->setHost(
+        $this->_mysql->setHost(
             $this->_fixGet($tmpInstance->Endpoint, 'Address'),
             $this->_fixGet($tmpInstance->Endpoint, 'Port')
-        );*/
+        );
         $drivers['local'] = $this->_mysql;
         $this->_mysql->init($myRole, $drivers);
 

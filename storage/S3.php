@@ -1,5 +1,5 @@
 <?php
-require "lib/AWSSDKforPHP/sdk.class.php";
+require_once "lib/AWSSDKforPHP/sdk.class.php";
 
 class Storage_S3 implements Storage_Interface
 {
@@ -227,7 +227,7 @@ class Storage_S3 implements Storage_Interface
                 $fsObject->path = $this->_getPathWithBasedir($fsObject->path);
                 $compare->updateFromRemote($fsObject);
 
-                // TODO update progress, needs better clarificatio
+                // TODO update progress, needs better clarification
                 $this->_out->jobStep($job);
             }
             $this->_out->jobEnd($jobFiles, "updated info about one batch of files");

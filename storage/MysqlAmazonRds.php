@@ -1,5 +1,5 @@
 <?php
-require "lib/AWSSDKforPHP/sdk.class.php";
+require_once "lib/AWSSDKforPHP/sdk.class.php";
 
 class Storage_MysqlAmazonRds extends Storage_Filesystem
 {

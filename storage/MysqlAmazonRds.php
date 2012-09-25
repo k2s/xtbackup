@@ -16,7 +16,6 @@ class Storage_MysqlAmazonRds extends Storage_Filesystem
      */
     public function  __construct($identity, $engine, $output, $options)
     {
-        $options['basedir'] = "";
         // filesystem options
         parent::__construct($identity, $engine, $output, $options);
 
@@ -41,6 +40,7 @@ class Storage_MysqlAmazonRds extends Storage_Filesystem
 
         // check if we know the mysql storage
         $this->_mysql = $this->_engine->getStorage($this->_options['storage']);
+        $this->setBaseDir($this->_mysql->getBaseDir());
     }
 
     static public function getConfigOptions($part=null)
@@ -200,10 +200,10 @@ TXT
         $this->_out->jobEnd($job, "ready");
 
         // configure and execute mysql backup
-        $this->_mysql->setHost(
+        /*$this->_mysql->setHost(
             $this->_fixGet($tmpInstance->Endpoint, 'Address'),
             $this->_fixGet($tmpInstance->Endpoint, 'Port')
-        );
+        );*/
         $drivers['local'] = $this->_mysql;
         $this->_mysql->init($myRole, $drivers);
 

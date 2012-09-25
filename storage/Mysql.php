@@ -246,16 +246,20 @@ TXT
             $createForced = false;
             if ($dbConfig['addtobasedir']) {
                 $this->_baseDir .= $dbConfig['addtobasedir'].DIRECTORY_SEPARATOR;
-                @mkdir($this->_baseDir);
-                $createForced = true;
+                if (!file_exists($this->_baseDir)) {
+                    @mkdir($this->_baseDir);
+                    $createForced = true;
+                }
             }
 
             $doRotate = ($dbConfig['rotate']['days']+$dbConfig['rotate']['weeks']+$dbConfig['rotate']['months'])>0;
             if ($doRotate) {
                 $doRotate = $this->_baseDir;
                 $this->_baseDir .= date("Y-m-d").DIRECTORY_SEPARATOR;
-                @mkdir($this->_baseDir);
-                $createForced = true;
+                if (!file_exists($this->_baseDir)) {
+                    @mkdir($this->_baseDir);
+                    $createForced = true;
+                }
             }
 
             // check/clear target folder

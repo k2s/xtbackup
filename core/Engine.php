@@ -113,6 +113,9 @@ class Core_Engine
                 require_once 'output/Cli.php';
                 self::$out->outputAdd(new Output_Cli(array()));
             }
+        } else {
+            require_once 'output/Cli.php';
+            self::$out->outputAdd(new Output_Cli(array()));
         }
 
         // process configuration arguments
@@ -129,12 +132,16 @@ class Core_Engine
         // add default options to engine
         self::array_merge_defaults(
             $this->_options['engine'],
-            self::getConfigOptions(CfgPart::DEFAULTS),
-            self::getConfigOptions(CfgPart::HINTS)
+            static::getConfigOptions(CfgPart::DEFAULTS),
+            static::getConfigOptions(CfgPart::HINTS)
         );
 
         // initialize class autoloading
         $this->_initAutoload();
+
+        if (false===$output) {
+            self::$out->outputRemove(0);
+        }
     }
 
     public function finish()
@@ -192,7 +199,8 @@ class Core_Engine
 
         if (!$onlyReturn) {
             // merge with existing options
-            $this->_optionsIni = array_merge_recursive($this->_optionsIni, $options);
+            //$this->_optionsIni = array_merge_recursive($this->_optionsIni, $options);
+            $this->_optionsIni = Core_Engine::array_merge_recursive_distinct($this->_optionsIni, $options);
         }
 
         return $options;
@@ -267,6 +275,7 @@ class Core_Engine
         if (!is_array($options)) {
             $options = array();
         }
+        // merge defaults
         foreach ($defaults as $key=>$val) {
             if (array_key_exists($key, $options)) {
                 if (is_array($val)) {
@@ -277,6 +286,29 @@ class Core_Engine
             } else {
                 $options[$key] = $val;
             }
+        }
+
+        // apply hints
+        if ($hints) {
+            foreach ($hints as $key=>$hint) {
+                if (array_key_exists($key, $options)) {
+                    if (isset($hint[CfgPart::HINT_TYPE])) {
+                        switch ($hint[CfgPart::HINT_TYPE]) {
+                            case CfgPart::TYPE_PATH:
+                                self::tildeToHome($options[$key]);
+                                break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public static function tildeToHome(&$o)
+    {
+        $s = substr($o, 0, 2);
+        if ($s=="~/" || $s=="~\\") {
+            $o = getenv("HOME").substr($o, 1);
         }
     }
 
@@ -301,6 +333,7 @@ class Core_Engine
                         ? $this->_options['output'][$keyName]
                         : array();
                 $class = array_key_exists('class', $params) ? $params['class'] : $keyName;
+                // TODO pass $keyName to constructor
                 $class = "Output_" . ucfirst($class);
                 $outputs[] = new $class($params);
             }
@@ -346,6 +379,11 @@ class Core_Engine
         }
         self::$out->logDebug("configuring storage driver '$class' from key '$key'");
         return new $class($key, $this, self::$out, $params);
+    }
+
+    public function getStorage($key)
+    {
+        return $this->_getStorage($key);
     }
 
     protected function _configureLocalStorage()
@@ -443,7 +481,11 @@ class Core_Engine
             function($className) {
                 $path = str_replace("_", "/", $className);
                 $path[0] = strtolower($path[0]);
+                if(!@file_exists($path . '.php') ) {
+                    return false;
+                }
                 require_once($path . '.php');
+                return true;
             }
         );
 
@@ -522,13 +564,15 @@ class Core_Engine
             CfgPart::SUGGESTED => false,
         );
         $driver = array(
-            'engine' => array('engine' => self::compactConfig(self::getConfigOptions())),
+            'engine' => array('engine' => self::compactConfig(static::getConfigOptions())),
             'storage' => array(),
             'filter' => array(),
             'compare' => array(),
             'output' => array(),
         );
+
         // request getConfigOptions on all drivers
+        // TODO use reflection of files in folders because the classes do not have to be loaded into memory already
         foreach (get_declared_classes() as $className) {
             $implements = array_intersect(
                 class_implements($className),

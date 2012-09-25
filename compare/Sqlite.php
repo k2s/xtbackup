@@ -75,8 +75,8 @@ class Compare_Sqlite implements Compare_Interface, Iterator
         // merge options with default options
         Core_Engine::array_merge_defaults(
             $options,
-            self::getConfigOptions(CfgPart::DEFAULTS),
-            self::getConfigOptions(CfgPart::HINTS)
+            static::getConfigOptions(CfgPart::DEFAULTS),
+            static::getConfigOptions(CfgPart::HINTS)
         );
 
         $options['prefix'] = false;
@@ -85,6 +85,11 @@ class Compare_Sqlite implements Compare_Interface, Iterator
         $this->_options = $options;
         $this->_engine = $engine;
         $this->_testing = $this->_options['testing']; // for faster access
+
+        // test if SQLite3 extension is loaded
+        if (!extension_loaded("sqlite3")) {
+            $this->_out->stop("PHP extension sqlite3 (http://www.php.net/manual/en/book.sqlite3.php) has to be loaded.");
+        }
     }
 
     public function init($myrole, $drivers)
@@ -434,7 +439,7 @@ SQL;
 
     public function current()
     {
-        return new Task($this->_job);
+        return new Compare_Task($this->_job);
     }
 
     public function remoteHasDone($task)
@@ -494,6 +499,7 @@ SQL;
                 'rebuild' => array(CfgPart::HINT_TYPE=>CfgPart::TYPE_BOOL),
                 'keep' => array(CfgPart::HINT_TYPE=>CfgPart::TYPE_BOOL),
                 'compare' => array(CfgPart::HINT_TYPE=>CfgPart::TYPE_BOOL),
+                'file' => array(CfgPart::HINT_TYPE=>CfgPart::TYPE_PATH)
             ),
             CfgPart::DEFAULTS => array(
                 'testing' => false,

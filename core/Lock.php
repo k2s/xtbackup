@@ -37,7 +37,7 @@ class Core_Lock
         $this->_cmdOptions = $iniOptions['ini'];
         $this->_output = $output;
         $this->initFileLock();
-        $this->_output->logNotice(">>>Lock object was initialised");
+        $this->_output->logDebug(">>>Lock object was initialised");
     }
     
     
@@ -76,7 +76,7 @@ class Core_Lock
             $this->_locked = false;
         } else {
             $this->_locked = true;
-            $this->_output->logNotice(">>>NOTICE! Failed to get lock");
+            $this->_output->logDebug(">>>NOTICE! Failed to get lock");
         }
         
     }
@@ -86,13 +86,13 @@ class Core_Lock
         switch ($this->_lockType) {
             case self::TYPE_TMP_DIR:
                 $this->_lock($this->_file);
-                $this->_output->logNotice(">>>LOCK: lock type - NO compare ini md5");
+                $this->_output->logDebug(">>>LOCK: lock type - NO compare ini md5");
                 break;
             case self::TYPE_TMP_DIR_MD5:
             default :
-                $this->_output->logNotice(">>>LOCK: lock type - also compare ini md5");
+                $this->_output->logDebug(">>>LOCK: lock type - also compare ini md5");
                 //so we need to check current and saved md5
-                $this->_output->logNotice($this->_iniMd5);
+                $this->_output->logDebug($this->_iniMd5);
                 var_dump($this->_savedMd5);
                 
                 if (empty($this->_savedMd5)|| (!empty($this->_savedMd5) && in_array($this->_iniMd5, $this->_savedMd5))) {
@@ -116,12 +116,12 @@ class Core_Lock
     {
         if(!flock($this->_file, LOCK_UN))
         { 
-            $this->_output->logNotice(">>>NOTICE! FAILED to release lock");
+            $this->_output->logDebug(">>>NOTICE! FAILED to release lock");
             return false;
         }
         ftruncate($this->_file, 0);
         fclose($this->_file);
-        $this->_output->logNotice(">>>File unlocked");
+        $this->_output->logDebug(">>>File unlocked");
     }
     
     public function wait()

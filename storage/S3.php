@@ -123,7 +123,7 @@ class Storage_S3 implements Storage_Interface
         );
         if (false == $this->_s3->if_bucket_exists($this->getBucket())) {
             $this->_out->jobEnd($job, "failed");
-            throw new Core_StopException("S3 bucket not found: '{$this->getBucket()}'", "S3Init");
+            throw new Core_StopException("S3 bucket not found: '{$this->getBucket()}' for access key '".substr($this->_options['key']['access'], 0, 5)."...'", "S3Init");
         }
         $this->_out->jobEnd($job, "authorized");
 
@@ -140,8 +140,10 @@ class Storage_S3 implements Storage_Interface
                 "Versioning not enabled for this S3 bucket, you will not be able to restore older versions of files."
             );
         }
-        if (is_string($this->_options['defaultRedundancyStorage'])) {
-            $this->_defaultRedundancyStorage = constant($this->_options['defaultRedundancyStorage']);
+        if (array_key_exists('defaultRedundancyStorage', $this->_options)) {
+            if (is_string($this->_options['defaultRedundancyStorage'])) {
+                $this->_defaultRedundancyStorage = constant("AmazonS3::".$this->_options['defaultRedundancyStorage']);
+            }
         }
         return true;
     }
@@ -468,6 +470,7 @@ class Storage_S3 implements Storage_Interface
         $opt = array(
             CfgPart::DEFAULTS => array(
                 'certificate_authority' => true,
+                'defaultRedundancyStorage' => 'STORAGE_STANDARD',
                 'refresh' => false,
                 'update' => false,
                 'compatibility-test' => false,
@@ -480,6 +483,7 @@ class Storage_S3 implements Storage_Interface
             CfgPart::DESCRIPTIONS => array(
                 'certificate_authority' => 'see https://forums.aws.amazon.com/ann.jspa?annID=1005',
                 'bucket' => 'Amazon S3 bucket name',
+                'defaultRedundancyStorage' => 'STORAGE_STANDARD or STORAGE_REDUCED',
                 'basedir' => 'base directory in bucket to compare with local',
                 'refresh' => 'read actual data from S3 and feed compare driver ? (yes/no/never)',
                 'update' => <<<TXT
@@ -532,7 +536,10 @@ TXT
     public function getMd5($path)
     {
         $v = $this->_s3->get_object_headers($this->getBucket(), $path);
-        $md5 = str_replace('"', '', (string)$v->header['etag']);
+        if (!array_key_exists('etag', $v->header)) {
+            return false;
+        }
+        $md5 = str_replace('"', '', (string) $v->header['etag']);
         return $md5;
     }
 

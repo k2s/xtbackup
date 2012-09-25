@@ -439,7 +439,7 @@ SQL;
 
     public function current()
     {
-        return new Task($this->_job);
+        return new Compare_Task($this->_job);
     }
 
     public function remoteHasDone($task)

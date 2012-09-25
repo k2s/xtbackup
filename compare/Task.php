@@ -1,5 +1,5 @@
 <?php
-class Task
+class Compare_Task
 {
     /**
      * @var string

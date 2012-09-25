@@ -301,7 +301,8 @@ SQL
             $this->_driver->applyFilterToObjects();
 
             // execute backup of DB objects
-            $msg = "creating backup of DB '$dbConfig[dbname]@$dbConfig[host]' to folder '$this->_baseDir'";
+            $host = $this->_options['host'];
+            $msg = "creating backup of DB '$dbConfig[dbname]@$host' to folder '$this->_baseDir'";
             if ($dbConfig['compressdata']) {
                 $msg .= ", data will be online compressed";
             }

@@ -1,5 +1,5 @@
 <?php
-require "lib/AWSSDKforPHP/sdk.class.php";
+require_once "lib/AWSSDKforPHP/sdk.class.php";
 
 class Storage_S3 implements Storage_Interface
 {
@@ -63,8 +63,8 @@ class Storage_S3 implements Storage_Interface
         // merge options with default options
         Core_Engine::array_merge_defaults(
             $options,
-            self::getConfigOptions(CfgPart::DEFAULTS),
-            self::getConfigOptions(CfgPart::HINTS)
+            static::getConfigOptions(CfgPart::DEFAULTS),
+            static::getConfigOptions(CfgPart::HINTS)
         );
 
         // TODO see Compare_Sqlite constructor
@@ -83,7 +83,11 @@ class Storage_S3 implements Storage_Interface
         $this->_asRemote = $myrole == Core_Engine::ROLE_REMOTE;
 
         // Amazon library SSL Connection Issues
-        define('AWS_CERTIFICATE_AUTHORITY', $this->_options['certificate_authority']);
+        if (!defined('AWS_CERTIFICATE_AUTHORITY')) {
+            define('AWS_CERTIFICATE_AUTHORITY', $this->_options['certificate_authority']);
+        } else {
+            $this->_out->logNotice("option 'certificate_authority' was already set, it can't be changed");
+        }
 
         if ($this->_options['compatibility-test']) {
             // see lib/AWSSDKforPHP/_compatibility_test
@@ -109,13 +113,17 @@ class Storage_S3 implements Storage_Interface
             );
         }
 
-
         $job = $this->_out->jobStart("handshaking with Amazon S3");
         // TODO we need better AmazonS3 error handling
-        $this->_s3 = new AmazonS3($this->_options['key']['access'], $this->_options['key']['secret']);
+        $this->_s3 = new AmazonS3(
+            array(
+                 'key'    => $this->_options['key']['access'],
+                 'secret' => $this->_options['key']['secret']
+            )
+        );
         if (false == $this->_s3->if_bucket_exists($this->getBucket())) {
             $this->_out->jobEnd($job, "failed");
-            throw new Core_StopException("S3 bucket not found: '{$this->getBucket()}'", "S3Init");
+            throw new Core_StopException("S3 bucket not found: '{$this->getBucket()}' for access key '".substr($this->_options['key']['access'], 0, 5)."...'", "S3Init");
         }
         $this->_out->jobEnd($job, "authorized");
 
@@ -132,8 +140,10 @@ class Storage_S3 implements Storage_Interface
                 "Versioning not enabled for this S3 bucket, you will not be able to restore older versions of files."
             );
         }
-        if (is_string($this->_options['defaultRedundancyStorage'])) {
-            $this->_defaultRedundancyStorage = constant($this->_options['defaultRedundancyStorage']);
+        if (array_key_exists('defaultRedundancyStorage', $this->_options)) {
+            if (is_string($this->_options['defaultRedundancyStorage'])) {
+                $this->_defaultRedundancyStorage = constant("AmazonS3::".$this->_options['defaultRedundancyStorage']);
+            }
         }
         return true;
     }
@@ -460,6 +470,7 @@ class Storage_S3 implements Storage_Interface
         $opt = array(
             CfgPart::DEFAULTS => array(
                 'certificate_authority' => true,
+                'defaultRedundancyStorage' => 'STORAGE_STANDARD',
                 'refresh' => false,
                 'update' => false,
                 'compatibility-test' => false,
@@ -472,6 +483,7 @@ class Storage_S3 implements Storage_Interface
             CfgPart::DESCRIPTIONS => array(
                 'certificate_authority' => 'see https://forums.aws.amazon.com/ann.jspa?annID=1005',
                 'bucket' => 'Amazon S3 bucket name',
+                'defaultRedundancyStorage' => 'STORAGE_STANDARD or STORAGE_REDUCED',
                 'basedir' => 'base directory in bucket to compare with local',
                 'refresh' => 'read actual data from S3 and feed compare driver ? (yes/no/never)',
                 'update' => <<<TXT
@@ -524,7 +536,10 @@ TXT
     public function getMd5($path)
     {
         $v = $this->_s3->get_object_headers($this->getBucket(), $path);
-        $md5 = str_replace('"', '', (string)$v->header['etag']);
+        if (!array_key_exists('etag', $v->header)) {
+            return false;
+        }
+        $md5 = str_replace('"', '', (string) $v->header['etag']);
         return $md5;
     }
 

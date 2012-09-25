@@ -31,4 +31,5 @@ class CfgPart
     const TYPE_BOOL = 3;
     const TYPE_ARRAY = 4;
     const TYPE_UNKNOWN = 0;
+    const TYPE_PATH = 5; // Core_Engine::array_merge_defaults() will expand ~/ to getenv("HOME")/
 }

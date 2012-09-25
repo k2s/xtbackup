@@ -26,7 +26,7 @@ class Output_Cli extends Output_Blackhole
     public function  __construct($options)
     {
         // merge options with default options
-        $options = Core_Engine::array_merge_recursive_distinct(self::getConfigOptions(CfgPart::DEFAULTS), $options);
+        $options = Core_Engine::array_merge_recursive_distinct(static::getConfigOptions(CfgPart::DEFAULTS), $options);
 
         // remember configuration options
         $this->_options = $options;
@@ -264,7 +264,7 @@ class Output_Cli extends Output_Blackhole
     {
         $opt = array(
             CfgPart::DEFAULTS=>array(
-                'verbosity'=>'debug',
+                'verbosity'=>'notice',
                 'progress'=>true,
             ),
             CfgPart::DESCRIPTIONS=>array(

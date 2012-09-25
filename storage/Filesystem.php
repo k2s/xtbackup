@@ -43,6 +43,11 @@ class Storage_Filesystem implements Storage_Interface
     protected $_fileStat;
 
     /**
+     * @var string
+     */
+    protected $_baseDir = false;
+
+    /**
      * @param Core_Engine  $engine
      * @param Output_Stack $output
      * @param array        $options
@@ -52,17 +57,19 @@ class Storage_Filesystem implements Storage_Interface
     public function  __construct($identity, $engine, $output, $options)
     {
         // merge options with default options
-        $options = $engine::array_merge_recursive_distinct(self::getConfigOptions(CfgPart::DEFAULTS), $options);
+        Core_Engine::array_merge_defaults(
+            $options,
+            static::getConfigOptions(CfgPart::DEFAULTS),
+            static::getConfigOptions(CfgPart::HINTS)
+        );
 
         $this->_identity = $identity;
         $this->_out = $output;
         $this->_options = $options;
         $this->_engine = $engine;
-        if (!array_key_exists('basedir', $this->_options)) {
-            $this->_out->stop("parameter 'baseDir' is required by driver '{$this->_identity}'");
+        if (array_key_exists('basedir', $this->_options)) {
+            $this->setBaseDir($this->_options['basedir']);
         }
-        $this->_baseDir = $this->_options['basedir']; // store for faster access
-        $this->_baseDir = rtrim($this->_baseDir, '/'). '/';
         $this->_isWindows = (strpos(strtolower(php_uname('s')), 'win') !== false);
         $this->_fileStat = new Storage_Filesystem_FileStat();
         if (array_key_exists('windows', $this->_options) && array_key_exists('encoding', $this->_options['windows'])) {
@@ -70,11 +77,21 @@ class Storage_Filesystem implements Storage_Interface
         }
     }
 
+    public function setBaseDir($baseDir)
+    {
+        $this->_baseDir = $baseDir; // store for faster access
+        $this->_baseDir = rtrim($this->_baseDir, '/'). '/';
+    }
+
     public function init($myrole, $drivers)
     {
         $this->_out->logNotice(">>>init ".get_class($this)." driver as $myrole");
         $this->_asRemote = $myrole==Core_Engine::ROLE_REMOTE;
         $this->_drivers = $drivers;
+
+        if (false===$this->_baseDir) {
+            $this->_out->stop("parameter 'baseDir' is required by driver '{$this->_identity}'");
+        }
 
         if (!file_exists($this->_baseDir)) {
             $this->_out->stop("local folder {$this->_baseDir} doesn't exists");
@@ -298,6 +315,9 @@ class Storage_Filesystem implements Storage_Interface
                 //'basedir'=>,
                 'windows'=>array('encoding'=>'utf8'),
 
+            ),
+            CfgPart::HINTS=>array(
+                'basedir'=>array(CfgPart::HINT_TYPE=>CfgPart::TYPE_PATH),
             ),
             CfgPart::DESCRIPTIONS=>array(
                 'refresh'=>'read actual data about file system and feed compare driver ?',

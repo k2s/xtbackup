@@ -77,7 +77,11 @@ class Storage_S3 implements Storage_Interface
         $this->_asRemote = $myrole == Core_Engine::ROLE_REMOTE;
 
         // Amazon library SSL Connection Issues
-        define('AWS_CERTIFICATE_AUTHORITY', $this->_options['certificate_authority']);
+        if (!defined('AWS_CERTIFICATE_AUTHORITY')) {
+            define('AWS_CERTIFICATE_AUTHORITY', $this->_options['certificate_authority']);
+        } else {
+            $this->_out->logNotice("option 'certificate_authority' was already set, it can't be changed");
+        }
 
         if ($this->_options['compatibility-test']) {
             // see lib/AWSSDKforPHP/_compatibility_test

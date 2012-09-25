@@ -105,7 +105,11 @@ TXT
         $this->_out->logNotice(">>>init ".get_class($this)." driver as $myRole");
 
         // Amazon library SSL Connection Issues
-        define('AWS_CERTIFICATE_AUTHORITY', $this->_options['certificate_authority']);
+        if (!defined('AWS_CERTIFICATE_AUTHORITY')) {
+            define('AWS_CERTIFICATE_AUTHORITY', $this->_options['certificate_authority']);
+        } else {
+            $this->_out->logNotice("option 'certificate_authority' was already set, it can't be changed");
+        }
 
         // receive information about the RDS instance
         $rds = new AmazonRDS(

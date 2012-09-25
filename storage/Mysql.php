@@ -257,7 +257,8 @@ TXT
 
             // check/clear target folder
             if (file_exists($this->_baseDir)) {
-                if ($doRotate) {
+                if ($doRotate && file_exists($this->_baseDir.'db/_name')) {
+                    // the folder contains valid backup so we are going only to rotate
                     $this->_out->logWarning("backup folder '$this->_baseDir' already exists, skipping");
                     $this->_doRotation($doRotate, $dbConfig);
                     continue;

@@ -145,6 +145,12 @@ TXT
         return $ret;
     }
 
+    public function setHost($host, $port)
+    {
+        $this->_options['host'] = $host;
+        $this->_options['port'] = $port;
+    }
+
     public function init($myrole, $drivers)
     {
         parent::init($myrole, $drivers);
@@ -157,7 +163,7 @@ TXT
 
         // connect to mysql
         $this->_db = new PDO(
-            "mysql:host=".$this->_options['host'].";dbname=mysql",
+            "mysql:host=".$this->_options['host'].";port=".$this->_options['port'].";dbname=mysql",
             $this->_options['user'],
             $this->_options['password'],
             array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8")

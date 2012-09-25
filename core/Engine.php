@@ -380,6 +380,11 @@ class Core_Engine
         return new $class($key, $this, self::$out, $params);
     }
 
+    public function getStorage($key)
+    {
+        return $this->_getStorage($key);
+    }
+
     protected function _configureLocalStorage()
     {
         if (!isset($this->_options['engine']['local'])) {
@@ -468,7 +473,11 @@ class Core_Engine
             function($className) {
                 $path = str_replace("_", "/", $className);
                 $path[0] = strtolower($path[0]);
+                if(!@file_exists($path . '.php') ) {
+                    return false;
+                }
                 require_once($path . '.php');
+                return true;
             }
         );
 

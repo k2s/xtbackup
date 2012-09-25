@@ -103,7 +103,6 @@ class Storage_S3 implements Storage_Interface
             );
         }
 
-
         $job = $this->_out->jobStart("handshaking with Amazon S3");
         // TODO we need better AmazonS3 error handling
         $this->_s3 = new AmazonS3($this->_options['key']['access'], $this->_options['key']['secret']);

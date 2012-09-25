@@ -25,6 +25,8 @@ class Storage_S3 implements Storage_Interface
      * @var Output_Stack
      */
     protected $_out;
+    
+    protected $_defaultRedundancyStorage = AmazonS3::STORAGE_STANDARD;
     /**
      * Identification of the object, it is the key from INI file
      *
@@ -46,6 +48,8 @@ class Storage_S3 implements Storage_Interface
      * @var string
      */
     protected $_baseDir = null;
+    
+    protected $_itemCount = 0;
 
     /**
      * @param Core_Engine  $engine
@@ -69,6 +73,8 @@ class Storage_S3 implements Storage_Interface
         $this->_out = $output;
         $this->_options = $options;
         $this->_engine = $engine;
+        //init basedir property
+        $this->getBaseDir();
     }
 
     public function init($myrole, $drivers)
@@ -134,7 +140,9 @@ class Storage_S3 implements Storage_Interface
                 "Versioning not enabled for this S3 bucket, you will not be able to restore older versions of files."
             );
         }
-
+        if (is_string($this->_options['defaultRedundancyStorage'])) {
+            $this->_defaultRedundancyStorage = constant($this->_options['defaultRedundancyStorage']);
+        }
         return true;
     }
 
@@ -171,20 +179,38 @@ class Storage_S3 implements Storage_Interface
         } else {
             $this->_out->logNotice("update requested by user");
         }
+        
+        //we do not suppose to enable this functionality
+        //$this->changeRedundancy();
 
         $job = $this->_out->jobStart("downloading info about files stored in Amazon S3");
         $this->_out->jobSetProgressStep($job, 100);
+        
+        // let compare driver know that we are starting
+        $compare->updateFromRemoteStart();
+        
+        $this->_list(array($this, "_refreshRemote"), array('compare' => $compare, 'job' => $job));
+        // let compare driver know that we are done
+        $compare->updateFromRemoteEnd();
 
+        $this->_out->jobEnd($job, "downloaded info about {$this->_itemCount} files");
+    }
+    
+    /**
+     * lists bucket's objects, applying callback to each of them
+     * 
+     * @param mixed $callback first argument of the callback is CFSimpleXML object
+     * @param array $params 
+     */
+    protected function _list($callback, $params = array())
+    {
         // prepare data for loop
         $bucket = $this->getBucket();
         $baseDir = $this->getBaseDir();
         $marker = '';
         $itemCount = 0;
         $v = false;
-
-        // let compare driver know that we are starting
-        $compare->updateFromRemoteStart();
-
+        
         $firstBatch = true;
         do {
             $list = $this->_s3->list_objects(
@@ -207,7 +233,7 @@ class Storage_S3 implements Storage_Interface
                     $this->_out->stop("S3 response problem, not all files returned");
                 }
             }
-            $itemCount += $count;
+            $this->_itemCount += $count;
 
             $jobFiles = $this->_out->jobStart("processing information about $count remote files");
 
@@ -229,15 +255,15 @@ class Storage_S3 implements Storage_Interface
             // process received information
             $metaId = 0;
             foreach ($list->body->Contents as $v) {
-                /** @var $v CFResponse */
-                // save object
-//                $meta = $response[$metaId++];
-                $fsObject = $this->_createFsObject($v, null);
-                $fsObject->path = $this->_getPathWithBasedir($fsObject->path);
-                $compare->updateFromRemote($fsObject);
-
-                // TODO update progress, needs better clarification
-                $this->_out->jobStep($job);
+                switch (true) {
+                    case is_array ($callback):
+                    case is_string ($callback):
+                        call_user_func($callback, $v, $params);
+                        break;
+                    case is_callable ($callback):
+                        $callback($v, $params);
+                        break;
+                }
             }
             $this->_out->jobEnd($jobFiles, "updated info about one batch of files");
 
@@ -245,11 +271,17 @@ class Storage_S3 implements Storage_Interface
             $marker = $v->Key;
             $firstBatch = false;
         } while ((string) $list->body->IsTruncated == 'true');
+        
+    }
+    
+    protected function _refreshRemote($v, $params)
+    {
+        $fsObject = $this->_createFsObject($v, null);
+        $fsObject->path = $this->_getPathWithBasedir($fsObject->path);
+        $params['compare']->updateFromRemote($fsObject);
 
-        // let compare driver know that we are done
-        $compare->updateFromRemoteEnd();
-
-        $this->_out->jobEnd($job, "downloaded info about $itemCount files");
+        // TODO update progress, needs better clarificatio
+        $this->_out->jobStep($params['job']);
     }
 
     /**
@@ -305,7 +337,7 @@ class Storage_S3 implements Storage_Interface
             }
             $simulate = false;
         }
-
+        
         /** @var $compare Compare_Interface */
         $compare = $drivers['compare'];
         /** @var $local Storage_Interface */
@@ -331,6 +363,7 @@ class Storage_S3 implements Storage_Interface
                                 $this->getBucket(), $path,
                                 array(
                                      'body' => '',
+                                     'storage' => $this->_defaultRedundancyStorage
                                 )
                             );
                         }
@@ -355,10 +388,11 @@ class Storage_S3 implements Storage_Interface
                                     $this->getBucket(), $path,
                                     array(
                                          'body' => '',
+                                         'storage' => $this->_defaultRedundancyStorage
                                     )
                                 );
                             } else {
-                                $options = array('fileUpload' => $uploadPath);
+                                $options = array('fileUpload' => $uploadPath, 'storage' => $this->_defaultRedundancyStorage);
                                 // TODO it should be possible to speedup upload of small upload but using S3 batch
                                 if ($this->_options['multipart']['big-files']) {
                                     // multipart upload for big files
@@ -506,7 +540,58 @@ TXT
     {
         return $path;
     }
-/*
+    
+    /*
+     * We do not suppose to enable the functionality
+     * 
+     * public function changeRedundancy()
+    {
+        if (isset($this->_options['redundancy']['change']) 
+                && $this->_options['redundancy']['change']) {
+            $type = AmazonS3::STORAGE_STANDARD;
+            $str = "AmazonS3::STORAGE_STANDARD";
+            if (isset($this->_options['redundancy']['type'])) {
+                $type = constant($this->_options['redundancy']['type']);
+                $str = $this->_options['redundancy']['type'];
+            }
+            $bsDir = $this->getBaseDir();
+            if (!empty($this->_options['redundancy']['baseDir'])) {
+                if (substr($this->_options['redundancy']['baseDir'], -1) != '/') {
+                    $this->_options['redundancy']['baseDir'] .= "/";
+                }
+                $this->setBasedir($this->_options['redundancy']['baseDir']);
+            }
+            
+           $this->_out->logNotice("starting to change redundancy storage to {$str}
+               for bucket: '{$this->getBucket()}'"); 
+               
+           $this->_list(array($this, "_changeRedundancy"), array('type' => $type));
+           $this->_out->logNotice("Redundancy storage changed to $str");
+           //back value of base dir
+           $this->setBasedir($bsDir);
+        } else {
+            $this->_out->logNotice("skipped, redundancy level change. Not requested");
+        }
+    }
+    
+    private function _changeRedundancy($v, $params)
+    {
+        $filename = (string)$v->Key;
+        $this->_s3->change_storage_redundancy(
+                $this->getBucket(), 
+                $filename, 
+                $params['type']);
+        
+        $this->_out->logNotice("redundancy storage changed for: $filename");
+    }*/
+    
+    public function setBasedir($value)
+    {
+        $this->_baseDir = $value;
+    }
+
+
+    /*
     function refreshLocal($myrole, $drivers)
     {
         throw new Exception("refreshLocal not supported in S3 driver");

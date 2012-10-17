@@ -757,7 +757,8 @@ function help($opts, $message=false)
         if (isset($opt['switch'][1]) && isset($opt['switch'][0])) {
             echo '-' . $opt['switch'][0] . ', --' . $opt['switch'][1] . (isset($opt['help']) ? "\t" . $opt['help'] : '') . "\n";
         } elseif (isset($opt['switch'][0])) {
-            echo '-' . $opt['switch'][0] . (isset($opt['help']) ? "\t\t" . $opt['help'] : '') . "\n";
+            $delimiter =  strlen($opt['switch'][0])>1 ? '--' : '-';
+            echo $delimiter . $opt['switch'][0] . (isset($opt['help']) ? "\t\t" . $opt['help'] : '') . "\n";
         } else {
             continue;
         }

@@ -611,6 +611,8 @@ SQL;
                     }
 
                     $fn = basename($fullFn);
+                    // the name could be changed in _handleCompressedFile()
+                    $fullFn = realpath($fullFn);
 
                     if ($truncate) {
                         $task = $this->_log->subtask()->start("truncating data in table '$fn'");

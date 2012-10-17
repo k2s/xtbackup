@@ -244,7 +244,8 @@ class RestoreMysql
         }
 
         $cmd .= $this->_opts['database'] . " $action $objName";
-        $output = $ret = null;
+        $output = array();
+        $ret = null;
         exec($cmd, $output, $ret);
         if ($output) {
             echo "Error output from external filter:".PHP_EOL.implode(PHP_EOL, $output);
@@ -269,8 +270,14 @@ class RestoreMysql
         return self::RETCODE_OK;
     }
 
+    /**
+     * Output information about backup data
+     *
+     * @return string
+     */
     public function getInfo()
     {
+        return "backup";
     }
 
     protected function _connectMysql()
@@ -356,7 +363,7 @@ class RestoreMysql
                             }
 
                             if (1!==$this->_filterExt($subPath, $fn)) {
-                                $task = $this->_log->subtask()->log("$subPath: skip '$fn' because of external filter");
+                                $this->_log->subtask()->log("$subPath: skip '$fn' because of external filter");
                                 continue;
                             }
 
@@ -582,7 +589,7 @@ SQL;
 
     function importDataFromFolderToLocalServer($subPath, $truncate=true)
     {
-        return $this->importDataFromFolder(true, $path, $truncate);
+        return $this->importDataFromFolder(true, $subPath, $truncate);
     }
 
     function importDataFromFolder($isLocalHost, $subPath, $truncate=true)
@@ -593,7 +600,7 @@ SQL;
                 if ($fn!="." && $fn!="..") {
 
                     if (1!==$this->_filterExt($subPath, $fn)) {
-                        $task = $this->_log->subtask()->log("$subPath: skip '$fn' because of external filter");
+                        $this->_log->subtask()->log("$subPath: skip '$fn' because of external filter");
                         continue;
                     }
 
@@ -627,6 +634,8 @@ SQL
             }
             closedir($handle);
         }
+
+        return true;
     }
 
     function execSqlFromFolderTogether($path)
@@ -664,7 +673,7 @@ SQL
                     $fullFn = $path.$fn;
 
                     if (1!==$this->_filterExt($subPath, $fn)) {
-                        $task = $this->_log->subtask()->log("skip '$fn' because of external filter");
+                        $this->_log->subtask()->log("skip '$fn' because of external filter");
                         continue;
                     }
 

@@ -195,6 +195,9 @@ TXT
             if (in_array($status, array('available'))) {
                 break;
             }
+            if (in_array($status, array('failed', 'storage-full', 'incompatible-parameters', 'incompatible-restore'))) {
+                throw new Core_StopException("RDS backup instance '$tempName' has stalled in status '$status'. Please fix the situation and restart backup.", "MysqlAmazonRdsInit");
+            }
             sleep(3);
         } while (true);
         $this->_out->jobEnd($job, "ready");

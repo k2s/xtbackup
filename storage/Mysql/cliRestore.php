@@ -453,9 +453,14 @@ SQL;
 
         // import data
         if (array_key_exists("data", $opts['actions'])) {
-            // TODO detect if mysql server is on localhost
-            $log->start("DATA load (local server)");
-            $this->importDataFromFolderToLocalServer("data");
+            // detect if mysql server is on localhost
+            if ($this->_opts['host'] == "localhost" || $this->_opts['host'] == "127.0.0.1") {
+                $log->start("DATA load (local server)");
+                $this->importDataFromFolderToLocalServer("data");
+            } else {
+                $log->start("DATA load (remote server)");
+                $this->importDataFromFolderToRemoteServer("data");
+            }
         }
 
         if ($opts['create-index']=="after") {

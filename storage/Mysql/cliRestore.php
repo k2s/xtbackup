@@ -18,6 +18,7 @@ try {
         'database' => array('switch' => array('D', 'database'), 'type' => GETOPT_VAL, 'help' => 'target database name'),
         'drop-db' => array('switch' => array('drop-db'), 'type' => GETOPT_SWITCH, 'help' => 'will drop DB if exists'),
         'no-data' => array('switch' => array('no-data'), 'type' => GETOPT_SWITCH, 'help' => 'skip data import'),
+        'force-local-server' => array('switch' => array('force-local-server'), 'type' => GETOPT_SWITCH, 'help' => 'force data load to use method optimal for local server'),
         'actions' => array('switch' => array('a', 'actions'), 'type' => GETOPT_VAL, 'default'=>'u,f,t,i,d,r,v,p,tr,g', 'help' => <<<TXT
 restore actions to execute (default is u,f,t,i,d,r,v,p,tr,g):
 u - users
@@ -454,7 +455,7 @@ SQL;
         // import data
         if (array_key_exists("data", $opts['actions'])) {
             // detect if mysql server is on localhost
-            if ($this->_opts['host'] == "localhost" || $this->_opts['host'] == "127.0.0.1") {
+            if ($this->_opts['force-local-server'] || $this->_opts['host'] == "localhost" || $this->_opts['host'] == "127.0.0.1") {
                 $log->start("DATA load (local server)");
                 $this->importDataFromFolderToLocalServer("data");
             } else {

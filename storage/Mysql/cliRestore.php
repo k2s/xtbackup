@@ -1,25 +1,25 @@
 <?php
-define('GETOPT_NOTSWITCH',0); // Internal use only
-define('GETOPT_SWITCH',1);
-define('GETOPT_ACCUMULATE',2);
-define('GETOPT_VAL',3);
-define('GETOPT_MULTIVAL',4);
-define('GETOPT_KEYVAL',5);
+define('GETOPT_NOTSWITCH', 0); // Internal use only
+define('GETOPT_SWITCH', 1);
+define('GETOPT_ACCUMULATE', 2);
+define('GETOPT_VAL', 3);
+define('GETOPT_MULTIVAL', 4);
+define('GETOPT_KEYVAL', 5);
 
 // parse command line
 try {
     $options = array(
         'user' => array('switch' => array('u', 'user'), 'type' => GETOPT_VAL, 'default' => 'root', 'help' => 'mysql user name under which we will perform restore'),
-        'password' => array('switch' => array('p', 'password'), 'type' => GETOPT_VAL, 'default' => (string) '', 'help' => 'mysql user password'),
-        'host' => array('switch' => array('h', 'host'),'type' => GETOPT_VAL, 'default' => 'localhost', 'help'=>'mysql server host name'),
-        'port' => array('switch' => array('P', 'port'), 'type' => GETOPT_VAL, 'default'=>3306, 'help' => 'mysql server port number'),
+        'password' => array('switch' => array('p', 'password'), 'type' => GETOPT_VAL, 'default' => (string)'', 'help' => 'mysql user password'),
+        'host' => array('switch' => array('h', 'host'), 'type' => GETOPT_VAL, 'default' => 'localhost', 'help' => 'mysql server host name'),
+        'port' => array('switch' => array('P', 'port'), 'type' => GETOPT_VAL, 'default' => 3306, 'help' => 'mysql server port number'),
         'socket' => array('switch' => array('S', 'socket'), 'type' => GETOPT_VAL, 'help' => 'mysql server port number'),
 //        'directory' => array('switch' => array('d', 'directory'), 'type' => GETOPT_VAL, 'help' => 'directory with backup data'),
         'database' => array('switch' => array('D', 'database'), 'type' => GETOPT_VAL, 'help' => 'target database name'),
         'drop-db' => array('switch' => array('drop-db'), 'type' => GETOPT_SWITCH, 'help' => 'will drop DB if exists'),
         'no-data' => array('switch' => array('no-data'), 'type' => GETOPT_SWITCH, 'help' => 'skip data import'),
         'force-local-server' => array('switch' => array('force-local-server'), 'type' => GETOPT_SWITCH, 'help' => 'force data load to use method optimal for local server'),
-        'actions' => array('switch' => array('a', 'actions'), 'type' => GETOPT_VAL, 'default'=>'u,f,t,i,d,r,v,p,tr,g', 'help' => <<<TXT
+        'actions' => array('switch' => array('a', 'actions'), 'type' => GETOPT_VAL, 'default' => 'u,f,t,i,d,r,v,p,tr,g', 'help' => <<<TXT
 restore actions to execute (default is u,f,t,i,d,r,v,p,tr,g):
 u - users
 f - functions
@@ -33,12 +33,12 @@ tr- triggers
 g - permission grants
 TXT
         ),
-        'create-index' => array('switch' => array('create-index'), 'type' => GETOPT_VAL, 'default'=>'before', 'help' => '(before|after) data load'),
+        'create-index' => array('switch' => array('create-index'), 'type' => GETOPT_VAL, 'default' => 'before', 'help' => '(before|after) data load'),
         'filter-ext' => array('switch' => array('F', 'filter-ext'), 'type' => GETOPT_VAL, 'help' => 'external command which returns 1 if object action should be processes'),
         'clone-to' => array('switch' => array('C', 'clone-to'), 'type' => GETOPT_VAL, 'help' => 'provide folder where you want to copy backup data, filter will be applied, if value ends with zip data will be compressed'),
         'decompress-only' => array('switch' => array('do', 'decompress-only'), 'type' => GETOPT_SWITCH, 'help' => 'decompress data files only'),
         'decompress-folder' => array('switch' => array('df', 'decompress-folder'), 'type' => GETOPT_VAL, 'help' => 'if data have to be uncompressed it will happen into data folder, you may change this with this option'),
-        'decompress-action' => array('switch' => array('da', 'decompress-action'), 'type' => GETOPT_VAL, 'default'=>'delete', 'help' => <<<TXT
+        'decompress-action' => array('switch' => array('da', 'decompress-action'), 'type' => GETOPT_VAL, 'default' => 'delete', 'help' => <<<TXT
 if data had to be decompressed on import this will happen after import completes:
 \tdelete - delete decompressed
 \tkeep - keep decompressed and compressed
@@ -48,13 +48,13 @@ TXT
         'force' => array('switch' => array('f', 'force'), 'type' => GETOPT_SWITCH, 'help' => 'will not prompt user to approve restore'),
         'quite' => array('switch' => array('q', 'quite'), 'type' => GETOPT_SWITCH, 'help' => 'will not print messages'),
         'help' => array('switch' => array('?', 'help'), 'type' => GETOPT_SWITCH, 'help' => 'display instruction how to use cli.php'),
-/*        'action' => array('switch' => array('a', 'action'), 'type' => GETOPT_VAL, 'help' => 'what action to run'),
-        'params' => array('switch' => 'p', 'type' => GETOPT_KEYVAL, 'help' => 'set request parameters'),
-        'cronList' => array('switch' => array('l', 'cron-list'), 'type' => GETOPT_SWITCH, 'help' => 'list all actions marked for scheduling'),
-        'verbose' => array('switch' => array('v', 'verbose'), 'type' => GETOPT_SWITCH, 'help' => 'enable output of PHP errors, this option overides php.ini and application.ini settings - Important to enable if you running code that failing in cli and you getting no errors'),
-        'help' => array('switch' => array('h', 'help'), 'type' => GETOPT_SWITCH, 'help' => 'display instruction how to use cli.php'),
-        'apache' => array('switch' => array('A', 'env-from-apache'), 'type' => GETOPT_MULTIVAL, 'help' =>'parse apache virtual host configuration file (may be used several times)'),
-        'info' => array('switch' => array('i', 'info'), 'type' => GETOPT_SWITCH, 'help' => 'bootstrap application, show loaded configuration and exit without running the application'),*/
+        /*        'action' => array('switch' => array('a', 'action'), 'type' => GETOPT_VAL, 'help' => 'what action to run'),
+                'params' => array('switch' => 'p', 'type' => GETOPT_KEYVAL, 'help' => 'set request parameters'),
+                'cronList' => array('switch' => array('l', 'cron-list'), 'type' => GETOPT_SWITCH, 'help' => 'list all actions marked for scheduling'),
+                'verbose' => array('switch' => array('v', 'verbose'), 'type' => GETOPT_SWITCH, 'help' => 'enable output of PHP errors, this option overides php.ini and application.ini settings - Important to enable if you running code that failing in cli and you getting no errors'),
+                'help' => array('switch' => array('h', 'help'), 'type' => GETOPT_SWITCH, 'help' => 'display instruction how to use cli.php'),
+                'apache' => array('switch' => array('A', 'env-from-apache'), 'type' => GETOPT_MULTIVAL, 'help' =>'parse apache virtual host configuration file (may be used several times)'),
+                'info' => array('switch' => array('i', 'info'), 'type' => GETOPT_SWITCH, 'help' => 'bootstrap application, show loaded configuration and exit without running the application'),*/
     );
     $opts = getopts($options, $_SERVER['argv']);
 } catch (Exception $e) {
@@ -70,7 +70,7 @@ if ($opts['help']) {
 }
 
 $folder = "";
-if (count($opts['cmdline'])!=1) {
+if (count($opts['cmdline']) != 1) {
     help($options, "ERROR: you have to specify backup directory");
     exit(RestoreMysql::RETCODE_PARAM_ERROR);
 } else {
@@ -79,26 +79,26 @@ if (count($opts['cmdline'])!=1) {
 
 // decode actions
 $actionList = array(
-    'u'=>'users',
-    'f'=>'functions',
-    't'=>'tables',
-    'i'=>'indexes',
-    'd'=>'data',
-    'r'=>'refs',
-    'v'=>'views',
-    'p'=>'procedures',
-    'tr'=>'triggers',
-    'g'=>'grants'
+    'u' => 'users',
+    'f' => 'functions',
+    't' => 'tables',
+    'i' => 'indexes',
+    'd' => 'data',
+    'r' => 'refs',
+    'v' => 'views',
+    'p' => 'procedures',
+    'tr' => 'triggers',
+    'g' => 'grants'
 );
 // 'u','f','t','i','d','r','v','p','tr','g'
 $origActions = $opts['actions'];
 $opts['actions'] = explode(",", strtolower($opts['actions']));
 $wrong = array_diff($opts['actions'], array_keys($actionList));
 if (count($wrong)) {
-    if (count($wrong)==1) {
-        help($options, "ERROR: parameter value '$origActions' contains wrong value: ".implode("", $wrong));
+    if (count($wrong) == 1) {
+        help($options, "ERROR: parameter value '$origActions' contains wrong value: " . implode("", $wrong));
     } else {
-        help($options, "ERROR: parameter value '$origActions' contains wrong values: ".implode(", ", $wrong));
+        help($options, "ERROR: parameter value '$origActions' contains wrong values: " . implode(", ", $wrong));
     }
     exit(RestoreMysql::RETCODE_PARAM_ERROR);
 }
@@ -130,7 +130,7 @@ if (!$opts['force']) {
     $fp = fopen('php://stdin', 'r');
     $answer = trim(fgets($fp, 1024));
     fclose($fp);
-    if (strtolower($answer)!=="y") {
+    if (strtolower($answer) !== "y") {
         echo "\n";
         // return code to recognize user cancellation
         die(RestoreMysql::RETCODE_USER_CANCEL);
@@ -191,14 +191,14 @@ class RestoreMysql
 
     protected function _fixFolderName($folder)
     {
-        return rtrim($folder, "/\\").DIRECTORY_SEPARATOR;
+        return rtrim($folder, "/\\") . DIRECTORY_SEPARATOR;
     }
-    
-    public function validateOpts($opts, $action=self::VALIDATE_RESTORE)
+
+    public function validateOpts($opts, $action = self::VALIDATE_RESTORE)
     {
         $this->_backupFolder = $this->_fixFolderName($this->_backupFolder);
         if (!$this->_opts['decompress-folder']) {
-            $this->_opts['decompress-folder'] = $this->_backupFolder.'data'.DIRECTORY_SEPARATOR;
+            $this->_opts['decompress-folder'] = $this->_backupFolder . 'data' . DIRECTORY_SEPARATOR;
         } else {
             $this->_opts['decompress-folder'] = $this->_fixFolderName($this->_opts['decompress-folder']);
         }
@@ -209,16 +209,16 @@ class RestoreMysql
             case 'replace':
                 break;
             default:
-                throw new Exception("Unknown decompress action '".$this->_opts['decompress-action']."'.");
+                throw new Exception("Unknown decompress action '" . $this->_opts['decompress-action'] . "'.");
         }
 
-        if ($action==self::VALIDATE_DECOMPRESS) {
+        if ($action == self::VALIDATE_DECOMPRESS) {
             return;
         }
 
         // validate parameters for clone process
 
-        if ($action==self::VALIDATE_CLONE) {
+        if ($action == self::VALIDATE_CLONE) {
             return;
         }
 
@@ -229,13 +229,13 @@ class RestoreMysql
 
         if ($opts['filter-ext']) {
             // try external filter response
-            if (123!=$this->_filterExt("test", "test")) {
+            if (123 != $this->_filterExt("test", "test")) {
                 throw new Exception("External filter didn't returned value '123' for action 'test'. Fix the filter program.");
             }
         }
     }
 
-    protected function _filterExt($action, $objName, $cmd=null)
+    protected function _filterExt($action, $objName, $cmd = null)
     {
         if (is_null($cmd)) {
             $cmd = $this->_opts['filter-ext'];
@@ -249,7 +249,7 @@ class RestoreMysql
         $ret = null;
         exec($cmd, $output, $ret);
         if ($output) {
-            echo "Error output from external filter:".PHP_EOL.implode(PHP_EOL, $output);
+            echo "Error output from external filter:" . PHP_EOL . implode(PHP_EOL, $output);
         }
 
         return $ret;
@@ -287,23 +287,25 @@ class RestoreMysql
         $this->_log->start("establishing DB connection");
         if ($this->_opts['socket']) {
             // connect over socket
-            $dsn = "mysql:unix_socket=".$this->_opts['socket'].";dbname=mysql";
+            $dsn = "mysql:unix_socket=" . $this->_opts['socket'] . ";dbname=mysql";
         } else {
             // connect over TCP/IP
-            $dsn = "mysql:host=".$this->_opts['host'].";port=".$this->_opts['port'].";dbname=mysql";
+            $dsn = "mysql:host=" . $this->_opts['host'] . ";port=" . $this->_opts['port'] . ";dbname=mysql";
         }
-        $this->_db = new PDO(
-            $dsn,
-            $this->_opts['user'],
-            $this->_opts['password'],
-            array(
-                // enable data load command
-                PDO::MYSQL_ATTR_LOCAL_INFILE=>1,
-                // let PDO throw exception on errors
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                // use UTF8 for object names
-                PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8"
-            )
+        $this->_db = new DbWrapper(
+            new PDO(
+                $dsn,
+                $this->_opts['user'],
+                $this->_opts['password'],
+                array(
+                    // enable data load command
+                    PDO::MYSQL_ATTR_LOCAL_INFILE => 1,
+                    // let PDO throw exception on errors
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                    // use UTF8 for object names
+                    PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8"
+                )
+            ), $this->_log
         );
         $this->_log->end();
     }
@@ -311,8 +313,8 @@ class RestoreMysql
     public static function tildeToHome(&$o)
     {
         $s = substr($o, 0, 2);
-        if ($s=="~/" || $s=="~\\") {
-            $o = getenv("HOME").substr($o, 1);
+        if ($s == "~/" || $s == "~\\") {
+            $o = getenv("HOME") . substr($o, 1);
         }
     }
 
@@ -323,7 +325,7 @@ class RestoreMysql
         $this->validateOpts($this->_opts, self::VALIDATE_CLONE);
 
         $path = $this->_backupFolder;
-        $dstFolder = ltrim($this->_opts['clone-to'], "/\\").DIRECTORY_SEPARATOR;
+        $dstFolder = ltrim($this->_opts['clone-to'], "/\\") . DIRECTORY_SEPARATOR;
         self::tildeToHome($dstFolder);
         @mkdir($dstFolder, 0777, true);
 
@@ -331,7 +333,7 @@ class RestoreMysql
         $handle = opendir($dstFolder);
         $isEmpty = true;
         while (false !== ($fn = readdir($handle))) {
-            if ($fn!="." && $fn!="..") {
+            if ($fn != "." && $fn != "..") {
                 $isEmpty = false;
                 break;
             }
@@ -342,28 +344,28 @@ class RestoreMysql
         }
 
         // copy files
-        if (file_exists($path) && false!==($handle = opendir($path))) {
+        if (file_exists($path) && false !== ($handle = opendir($path))) {
             while (false !== ($subPath = readdir($handle))) {
-                if (is_file($path.$subPath)) {
+                if (is_file($path . $subPath)) {
                     // restore support files
-                    copy($path.$subPath, $dstFolder.$subPath);
-                } elseif ($subPath!="." && $subPath!="..") {
+                    copy($path . $subPath, $dstFolder . $subPath);
+                } elseif ($subPath != "." && $subPath != "..") {
                     // actions
                     if (!array_key_exists($subPath, $this->_opts['actions'])) {
                         // not configured to be processed in --actions
                         continue;
                     }
                     @mkdir($dstFolder . $subPath, 0777, true);
-                    if (false!==($h2 = opendir($path.$subPath))) {
+                    if (false !== ($h2 = opendir($path . $subPath))) {
                         while (false !== ($fn = readdir($h2))) {
                             // loop files/objects
-                            $fullFn = $path.$subPath.DIRECTORY_SEPARATOR.$fn;
-                            if ($subPath=="." || $subPath==".." || !is_file($fullFn)) {
+                            $fullFn = $path . $subPath . DIRECTORY_SEPARATOR . $fn;
+                            if ($subPath == "." || $subPath == ".." || !is_file($fullFn)) {
                                 // nothing to do
                                 continue;
                             }
 
-                            if (1!==$this->_filterExt($subPath, $fn)) {
+                            if (1 !== $this->_filterExt($subPath, $fn)) {
                                 $this->_log->subtask()->log("$subPath: skip '$fn' because of external filter");
                                 continue;
                             }
@@ -393,8 +395,8 @@ class RestoreMysql
         // prepare shorter variable names
         $log = $this->_log;
         $db = $this->_db;
-        $opts = &$this->_opts;
-        $folder = &$this->_backupFolder;
+        $opts = & $this->_opts;
+        $folder = & $this->_backupFolder;
 
         // drop database if requested
         if ($opts['drop-db']) {
@@ -404,13 +406,13 @@ class RestoreMysql
 
         // create database
         $log->start("DB prepare");
-        $sql = file_get_contents($folder. '/db/_create');
+        $sql = file_get_contents($folder . '/db/_create');
         $sql = str_replace("`$this->_originalDbName`", "`$opts[database]`", $sql);
         try {
             $db->exec($sql);
         } catch (PDOException $e) {
-            if ($e->getCode()=="HY000") {
-                echo $e->getMessage()."\n";
+            if ($e->getCode() == "HY000") {
+                echo $e->getMessage() . "\n";
                 exit(1);
             }
             throw $e;
@@ -446,7 +448,7 @@ SQL;
         $log->start("TABLES create");
         $this->execSqlFromFolder("tables");
 
-        if ($opts['create-index']=="before") {
+        if ($opts['create-index'] == "before") {
             // create index
             $log->start("INDEXES create");
             $this->execSqlFromFolder("indexes");
@@ -464,7 +466,7 @@ SQL;
             }
         }
 
-        if ($opts['create-index']=="after") {
+        if ($opts['create-index'] == "after") {
             // create index
             $log->start("INDEXES create");
             $this->execSqlFromFolder("indexes");
@@ -501,13 +503,14 @@ SQL;
         $log->end();
 
     }
+
     public function decompressFile($srcFile, $dstFile)
     {
         echo "decompress $srcFile to $dstFile\n";
         $fp = fopen($dstFile, "w");
         $zp = gzopen($srcFile, "r");
-        while(!gzeof($zp)) {
-            $buf = gzread($zp, 1024*1024);
+        while (!gzeof($zp)) {
+            $buf = gzread($zp, 1024 * 1024);
             fwrite($fp, $buf, strlen($buf));
         }
         fclose($fp);
@@ -515,22 +518,25 @@ SQL;
     }
 
     /**
-     * @return string false if this file should be skipped, pass other values to _handleCompressedFileAction()
+     * @param $fileName
+     * @param bool $checkDataFolder
+     * @return bool|string false if this file should be skipped, pass other values to _handleCompressedFileAction()
+     * @throws Exception
      */
-    protected function _handleCompressedFile(&$fileName, $checkDataFolder=true)
+    protected function _handleCompressedFile(&$fileName, $checkDataFolder = true)
     {
         $info = pathinfo($fileName);
-        if (!array_key_exists('extension', $info) || $info['extension']!="z") {
+        if (!array_key_exists('extension', $info) || $info['extension'] != "z") {
             // it is not compressed file
             return "";
         }
 
         if (!array_key_exists('filename', $info)) {
             // PHP <5.2 compatibility
-            $info['filename'] = substr($info['basename'], 0, -(1+strlen($info['extension'])));
+            $info['filename'] = substr($info['basename'], 0, -(1 + strlen($info['extension'])));
         }
 
-        if ($checkDataFolder && file_exists($this->_backupFolder.'data'.DIRECTORY_SEPARATOR.$info['filename'])) {
+        if ($checkDataFolder && file_exists($this->_backupFolder . 'data' . DIRECTORY_SEPARATOR . $info['filename'])) {
             // skip it, don't worry it will be imported
             return false;
         }
@@ -538,7 +544,7 @@ SQL;
         // we need to decompress the file
         $srcFile = $fileName;
         $fn = $info['filename'];
-        $fileName = $this->_opts['decompress-folder'].$fn;
+        $fileName = $this->_opts['decompress-folder'] . $fn;
 
         if (!file_exists($fileName)) {
             // decompressed if doesn't exists already
@@ -553,7 +559,7 @@ SQL;
             case 'replace':
                 return $srcFile;
             default:
-                throw new Exception("Was validateOpts() called ? Unknown decompress action '".$this->_opts['decompress-action']."'.");
+                throw new Exception("Was validateOpts() called ? Unknown decompress action '" . $this->_opts['decompress-action'] . "'.");
         }
     }
 
@@ -568,12 +574,12 @@ SQL;
     {
         $this->validateOpts($this->_opts, self::VALIDATE_DECOMPRESS);
 
-        $path = $this->_backupFolder.'data'.DIRECTORY_SEPARATOR;
-        if (file_exists($path) && false!==($handle = opendir($path))) {
+        $path = $this->_backupFolder . 'data' . DIRECTORY_SEPARATOR;
+        if (file_exists($path) && false !== ($handle = opendir($path))) {
             while (false !== ($fn = readdir($handle))) {
-                if ($fn!="." && $fn!="..") {
-                    $fullFn = $path.$fn;
-                    if (false===($afterAction = $this->_handleCompressedFile($fullFn, false))) {
+                if ($fn != "." && $fn != "..") {
+                    $fullFn = $path . $fn;
+                    if (false === ($afterAction = $this->_handleCompressedFile($fullFn, false))) {
                         // skip this file
                         continue;
                     }
@@ -587,31 +593,31 @@ SQL;
 
     }
 
-    function importDataFromFolderToRemoteServer($path, $truncate=true)
+    function importDataFromFolderToRemoteServer($path, $truncate = true)
     {
         return $this->importDataFromFolder(false, $path, $truncate);
     }
 
 
-    function importDataFromFolderToLocalServer($subPath, $truncate=true)
+    function importDataFromFolderToLocalServer($subPath, $truncate = true)
     {
         return $this->importDataFromFolder(true, $subPath, $truncate);
     }
 
-    function importDataFromFolder($isLocalHost, $subPath, $truncate=true)
+    function importDataFromFolder($isLocalHost, $subPath, $truncate = true)
     {
-        $path = $this->_backupFolder.$subPath.DIRECTORY_SEPARATOR;
-        if (file_exists($path) && false!==($handle = opendir($path))) {
+        $path = $this->_backupFolder . $subPath . DIRECTORY_SEPARATOR;
+        if (file_exists($path) && false !== ($handle = opendir($path))) {
             while (false !== ($fn = readdir($handle))) {
-                if ($fn!="." && $fn!="..") {
+                if ($fn != "." && $fn != "..") {
 
-                    if (1!==$this->_filterExt($subPath, $fn)) {
+                    if (1 !== $this->_filterExt($subPath, $fn)) {
                         $this->_log->subtask()->log("$subPath: skip '$fn' because of external filter");
                         continue;
                     }
 
-                    $fullFn = realpath($path.$fn);
-                    if (false===($afterAction = $this->_handleCompressedFile($fullFn))) {
+                    $fullFn = realpath($path . $fn);
+                    if (false === ($afterAction = $this->_handleCompressedFile($fullFn))) {
                         // skip this file
                         continue;
                     }
@@ -651,13 +657,12 @@ SQL
         // doesn't seam to be faster localy and there is risk, that the SQL command will be too long
         // some speed improvement should be visible if executed on remote server
         // TODO we have to play with this more
-        global $db;
 
         $sql = "";
-        if (file_exists($path) && false!==($handle = opendir($path))) {
+        if (file_exists($path) && false !== ($handle = opendir($path))) {
             while (false !== ($fn = readdir($handle))) {
-                if ($fn!="." && $fn!="..") {
-                    $fullFn = $path.$fn;
+                if ($fn != "." && $fn != "..") {
+                    $fullFn = $path . $fn;
                     $sql .= file_get_contents($fullFn);
                 }
             }
@@ -668,19 +673,19 @@ SQL
         }
     }
 
-    function execSqlFromFolder($subPath, $tryRepeat=false)
+    function execSqlFromFolder($subPath, $tryRepeat = false)
     {
         if (!array_key_exists($subPath, $this->_opts['actions'])) {
             return;
         }
-        $path = $this->_backupFolder.$subPath.DIRECTORY_SEPARATOR;
+        $path = $this->_backupFolder . $subPath . DIRECTORY_SEPARATOR;
         $repeat = array();
-        if (file_exists($path) && false!==($handle = opendir($path))) {
+        if (file_exists($path) && false !== ($handle = opendir($path))) {
             while (false !== ($fn = readdir($handle))) {
-                if ($fn!="." && $fn!="..") {
-                    $fullFn = $path.$fn;
+                if ($fn != "." && $fn != "..") {
+                    $fullFn = $path . $fn;
 
-                    if (1!==$this->_filterExt($subPath, $fn)) {
+                    if (1 !== $this->_filterExt($subPath, $fn)) {
                         $this->_log->subtask()->log("skip '$fn' because of external filter");
                         continue;
                     }
@@ -698,7 +703,7 @@ SQL
                                 $repeat[$fullFn][] = $e;
                             }
                         } else {
-                            throw new Exception("ERROR: in file '$fullFn'" , null, $e);
+                            throw new Exception("ERROR: in file '$fullFn'", null, $e);
                         }
                     }
                     $task->end();
@@ -719,7 +724,7 @@ SQL
         $tryRepeat = true;
 
         $repeat = array();
-        foreach (array_reverse($repeatFiles) as $fullFn=>$es) {
+        foreach (array_reverse($repeatFiles) as $fullFn => $es) {
             $sql = file_get_contents($fullFn);
             try {
                 $this->_db->exec($sql);
@@ -731,19 +736,19 @@ SQL
                         $repeat[$fullFn][] = $e;
                     }
                 } else {
-                    throw new Exception("ERROR: in file '$fullFn'" , null, $e);
+                    throw new Exception("ERROR: in file '$fullFn'", null, $e);
                 }
             }
 
         }
 
-        if (count($repeat)==0) {
+        if (count($repeat) == 0) {
             // all done
             return;
         }
 
         // if again the same array was produced we have to stop
-        if (count(array_diff(array_keys($repeatFiles), array_keys($repeat)))==0) {
+        if (count(array_diff(array_keys($repeatFiles), array_keys($repeat))) == 0) {
             throw new ExceptionUnsolvable($repeat);
         }
 
@@ -754,7 +759,7 @@ SQL
 
 
 //////////////////////////////////////
-function help($opts, $message=false)
+function help($opts, $message = false)
 {
     $cmdName = basename(__FILE__);
     echo "Run with interpreter: php -f {$cmdName}.php -- [<parameters>] [<backup folder>]\n";
@@ -765,14 +770,14 @@ function help($opts, $message=false)
         if (isset($opt['switch'][1]) && isset($opt['switch'][0])) {
             echo '-' . $opt['switch'][0] . ', --' . $opt['switch'][1] . (isset($opt['help']) ? "\t" . $opt['help'] : '') . "\n";
         } elseif (isset($opt['switch'][0])) {
-            $delimiter =  strlen($opt['switch'][0])>1 ? '--' : '-';
+            $delimiter = strlen($opt['switch'][0]) > 1 ? '--' : '-';
             echo $delimiter . $opt['switch'][0] . (isset($opt['help']) ? "\t\t" . $opt['help'] : '') . "\n";
         } else {
             continue;
         }
     }
 
-    if (false!==$message) {
+    if (false !== $message) {
         echo "\n\n$message\n";
     }
 }
@@ -791,7 +796,64 @@ class ExceptionUnsolvable extends Exception
 
     public function __toString()
     {
-        return "Unsolvable errors exists:\n".print_r($this->_filesWithErrors, true);
+        return "Unsolvable errors exists:\n" . print_r($this->_filesWithErrors, true);
+    }
+}
+
+class DbWrapper
+{
+    /**
+     * @var PDO
+     */
+    private $_db;
+    /**
+     * @var Log
+     */
+    private $_log;
+    /**
+     * @var bool
+     */
+    private $_printSql;
+
+    public function __construct(PDO $db, $log, $printSql = false)
+    {
+        $this->_db = $db;
+        $this->_log = $log;
+        $this->_printSql = $printSql;
+    }
+
+    public function exec($sql)
+    {
+        if ($this->_printSql) {
+            $this->_log->log(">$sql");
+        }
+        return $this->_checkWarnings($this->_db->exec($sql));
+    }
+
+    public function query($sql)
+    {
+        if ($this->_printSql) {
+            $this->_log->log("-- SQL\n$sql\n-- SQL\n");
+
+        }
+        return $this->_checkWarnings($this->_db->query($sql));
+    }
+
+    protected function _checkWarnings($ret) {
+        $warnings = $this->_db->query('SHOW WARNINGS')->fetchAll();
+        if (count($warnings)) {
+            $c = 0;
+            foreach ($warnings as $w) {
+                if ($w["Level"]!=="Note") {
+                    $this->_log->log("#$w[Level]: $w[Message]");
+                    $c++;
+                }
+            }
+//            if ($c) {
+//                die("DDDDDDD");
+//            }
+        }
+        return $ret;
     }
 }
 
@@ -804,7 +866,7 @@ class Log
     protected $_taskLevel = 0;
     protected $_prefix = "";
 
-    public function __construct($echo, $taskLevel=0)
+    public function __construct($echo, $taskLevel = 0)
     {
         $this->_doEcho = $echo;
         $this->_taskLevel = $taskLevel;
@@ -813,40 +875,45 @@ class Log
 
     public function __destruct()
     {
-        if ($this->_text!==false && $this->_taskLevel==0) {
-            echo '!!! incorrect log shutdown'.PHP_EOL;
-            echo $this->_text.' ... duration '.$this->get().' seconds'.PHP_EOL;
+        if ($this->_text !== false && $this->_taskLevel == 0) {
+            echo '!!! incorrect log shutdown' . PHP_EOL;
+            echo sprintf("%s ... duration %f second(s)", $this->_text, $this->get()) . PHP_EOL;
         }
     }
 
     public function subtask()
     {
         //$this->_echo();
-        $task = new Log($this->_doEcho, $this->_taskLevel+1);
+        $task = new Log($this->_doEcho, $this->_taskLevel + 1);
         return $task;
     }
 
     public function log($message)
     {
-        echo $this->_prefix.$message.PHP_EOL;
+        echo $this->_prefix . $message . PHP_EOL;
     }
 
     protected function _echo()
     {
-        if ($this->_doEcho && $this->_text!==false) {
-            echo $this->_prefix.$this->_text.' ... duration '.$this->get().' seconds'.PHP_EOL;
+        if ($this->_doEcho && $this->_text !== false) {
+            echo sprintf("%s ... duration %f second(s)", $this->_prefix . $this->_text, $this->get()) . PHP_EOL;
         }
         $this->_text = false;
     }
 
-    function start($text, $echoOnStart=true)
+    /**
+     * @param $text
+     * @param bool $echoOnStart
+     * @return Log
+     */
+    function start($text, $echoOnStart = true)
     {
         $this->_echo();
         $this->_start = $this->getTime();
         $this->_text = $text;
 
-        if ($echoOnStart && $this->_doEcho && $this->_text!==false) {
-            echo $this->_prefix.$this->_text.' ... START'.PHP_EOL;
+        if ($echoOnStart && $this->_doEcho && $this->_text !== false) {
+            echo $this->_prefix . $this->_text . ' ... START' . PHP_EOL;
         }
 
         return $this;
@@ -858,7 +925,7 @@ class Log
     }
 
     /*  get the current timer value  */
-    function get($decimals = 8)
+    function get($decimals = 6)
     {
         return round(($this->getTime() - $this->_start), $decimals);
     }
@@ -866,20 +933,21 @@ class Log
     /*  format the time in seconds  */
     function getTime()
     {
+        /** @noinspection PhpUnusedLocalVariableInspection */
         $usec = $sec = 0;
         list($usec, $sec) = explode(' ', microtime());
-        return ((float) $usec + (float) $sec);
+        return ((float)$usec + (float)$sec);
     }
 }
 
 
 /**********************************************************************************
-	* Coded by Matt Carter (M@ttCarter.net)                                           *
-	***********************************************************************************
-	* getOpts                                                                       *
-	* Extended CLI mode option and switch handling                                    *
-	*                                                                                 *
-	**********************************************************************************/
+ * Coded by Matt Carter (M@ttCarter.net)                                           *
+ ***********************************************************************************
+ * getOpts                                                                       *
+ * Extended CLI mode option and switch handling                                    *
+ *                                                                                 *
+ **********************************************************************************/
 /*
 GetOpt Readme
 +++++++++++++++
@@ -991,112 +1059,116 @@ GETOPT_KEYVAL
 */
 
 /**
-* @param array $options The getOpts specification. See the documentation for more details
-* @param string|array $fromarr Either a command line of switches or the array structure to take options from. If omitted $_SERVER['argv'] is used
-* @return array Processed array of return values
-*/
-function getopts($options,$fromarr = null) {
-	if ($fromarr === null)
-		$fromarr = $_SERVER['argv'];
-	elseif (!is_array($fromarr))
-		$fromarr = explode(' ',$fromarr); // Split it into an array if someone passes anything other than an array
-	$opts = array('cmdline' => array()); // Output options
-	$optionslookup = array(); // Reverse lookup table mapping each possible option to its real $options key
-	foreach ($options as $optitem => $props) { // Default all options
-		if (!isset($props['type'])) { // User didnt specify type...
-				$options[$optitem]['type'] = GETOPT_SWITCH; // Default to switch
-				$props['type'] = GETOPT_SWITCH; // And again because we're not using pointers here
-		}
-		switch ($props['type']) {
-				case GETOPT_VAL:
-					if (isset($props['default'])) {
-						$opts[$optitem] = $props['default'];
-						break;
-					} // else fallthough...
-				case GETOPT_ACCUMULATE:
-				case GETOPT_SWITCH:
-					$opts[$optitem] = 0;
-					break;
-				case GETOPT_MULTIVAL:
-				case GETOPT_KEYVAL:
-					$opts[$optitem] = array();
-		}
-		if (is_array($props['switch'])) { // Create the $optionslookup var from an array of aliases
-				foreach ($props['switch'] as $switchalias)
-					$optionslookup[$switchalias] = $optitem;
-		} else { // Create the $optionslookup ref as a simple pointer to the hash
-			$optionslookup[$props['switch']] = $optitem;
-		}
-	}
+ * @param array $options The getOpts specification. See the documentation for more details
+ * @param string|array $fromarr Either a command line of switches or the array structure to take options from. If omitted $_SERVER['argv'] is used
+ * @return array Processed array of return values
+ * @throws Exception
+ */
+function getopts($options, $fromarr = null)
+{
+    if ($fromarr === null)
+        $fromarr = $_SERVER['argv'];
+    elseif (!is_array($fromarr))
+        $fromarr = explode(' ', $fromarr); // Split it into an array if someone passes anything other than an array
+    $opts = array('cmdline' => array()); // Output options
+    $optionslookup = array(); // Reverse lookup table mapping each possible option to its real $options key
+    foreach ($options as $optitem => $props) { // Default all options
+        if (!isset($props['type'])) { // User didnt specify type...
+            $options[$optitem]['type'] = GETOPT_SWITCH; // Default to switch
+            $props['type'] = GETOPT_SWITCH; // And again because we're not using pointers here
+        }
+        switch ($props['type']) {
+            /** @noinspection PhpMissingBreakStatementInspection */
+            case GETOPT_VAL:
+                if (isset($props['default'])) {
+                    $opts[$optitem] = $props['default'];
+                    break;
+                } // else fallthough...
+            case GETOPT_ACCUMULATE:
+            case GETOPT_SWITCH:
+                $opts[$optitem] = 0;
+                break;
+            case GETOPT_MULTIVAL:
+            case GETOPT_KEYVAL:
+                $opts[$optitem] = array();
+        }
+        if (is_array($props['switch'])) { // Create the $optionslookup var from an array of aliases
+            foreach ($props['switch'] as $switchalias)
+                $optionslookup[$switchalias] = $optitem;
+        } else { // Create the $optionslookup ref as a simple pointer to the hash
+            $optionslookup[$props['switch']] = $optitem;
+        }
+    }
 
     $inswitch_userkey = $inswitch_key = "";
-	$inswitch = GETOPT_NOTSWITCH;
-	for ($i = 1; $i < count($fromarr); $i++) {
-		switch ($inswitch) {
-			case GETOPT_MULTIVAL:
-			case GETOPT_VAL:
-				if (substr($fromarr[$i],0,1) == '-') // Throw error if the user tries to simply set another switch while the last one is still 'open'
-					throw new Exception("The option '{$fromarr[$i]}' needs a value.\n");
-				GETOPT_setval($opts,$options,$inswitch_key,$fromarr[$i]);
-				$inswitch = GETOPT_NOTSWITCH; // Reset the reader to carry on reading normal stuff
-				break;
-			case GETOPT_KEYVAL: // Yes, the awkward one.
-				if (substr($fromarr[$i],0,1) == '-') // Throw error if the user tries to simply set another switch while the last one is still 'open'
-					throw new Exception("The option '{$fromarr[$i]}' needs a value.\n");
-				$fromarr[$i] = strtr($fromarr[$i],':','='); // Replace all ':' with '=' (keeping things simple and fast.
-				if (strpos($fromarr[$i],'=') === false)
-					throw new Exception("The option '$inswitch_userkey' needs a key-value pair. E.g. '-$inswitch_userkey option=value'");
-				GETOPT_setval($opts,$options,$inswitch_key,explode('=',$fromarr[$i]));
-				$inswitch = GETOPT_NOTSWITCH; // Reset the reader to carry on reading normal stuff
-				break;
-			case GETOPT_NOTSWITCH: // General invokation of no previously complex cmdline options (i.e. i have no idea what to expect next)
-				if (substr($fromarr[$i],0,1) == '-') {
-					// Probably the start of a switch
-					if ((strlen($fromarr[$i]) == 2) || (substr($fromarr[$i],0,2) == '--')) { // Single switch OR long opt (might be a weird thing like VAL, MULTIVAL etc.)
-							$userkey = ltrim($fromarr[$i],'-');
-							if (!isset($optionslookup[$userkey]))
-									throw new Exception("Unknown option '-$userkey'\n");
-								$hashkey = $optionslookup[$userkey]; // Replace with the REAL key
-							if (($options[$hashkey]['type'] == GETOPT_SWITCH) || ($options[$hashkey]['type'] == GETOPT_ACCUMULATE)) {
-								GETOPT_setval($opts,$options,$hashkey,1); // Simple enough - Single option specified in switch that needs no params.
-							} else { // OK the option needs a value. This is where the fun begins
-								$inswitch = $options[$hashkey]['type']; // Set so the next process cycle will pick it up
-								$inswitch_key = $hashkey;
-								$inswitch_userkey = $userkey;
-							}
-					} else {
-						// Multiple letters. Probably a bundling
-						for ($o = 1; $o < strlen($fromarr[$i]); $o++) {
-							$hashkey = substr($fromarr[$i],$o,1);
-							if (!isset($optionslookup[$hashkey]))
-									throw new Exception("Unknown option '-$hashkey'\n");
-							if (($options[$optionslookup[$hashkey]]['type'] != GETOPT_SWITCH) && ($options[$optionslookup[$hashkey]]['type'] != GETOPT_ACCUMULATE))
-								throw new Exception("Option '-$hashkey' requires a value.\n");
-							GETOPT_setval($opts,$options,$optionslookup[$hashkey],1);
-						}
-					}
-				} else {
-					$opts['cmdline'][] = $fromarr[$i]; // Just detritus on the cmdline
-				}
-				break;
-		}
-	}
-	return $opts;
+    $inswitch = GETOPT_NOTSWITCH;
+    for ($i = 1; $i < count($fromarr); $i++) {
+        switch ($inswitch) {
+            case GETOPT_MULTIVAL:
+            case GETOPT_VAL:
+                if (substr($fromarr[$i], 0, 1) == '-') // Throw error if the user tries to simply set another switch while the last one is still 'open'
+                    throw new Exception("The option '{$fromarr[$i]}' needs a value.\n");
+                GETOPT_setval($opts, $options, $inswitch_key, $fromarr[$i]);
+                $inswitch = GETOPT_NOTSWITCH; // Reset the reader to carry on reading normal stuff
+                break;
+            case GETOPT_KEYVAL: // Yes, the awkward one.
+                if (substr($fromarr[$i], 0, 1) == '-') // Throw error if the user tries to simply set another switch while the last one is still 'open'
+                    throw new Exception("The option '{$fromarr[$i]}' needs a value.\n");
+                $fromarr[$i] = strtr($fromarr[$i], ':', '='); // Replace all ':' with '=' (keeping things simple and fast.
+                if (strpos($fromarr[$i], '=') === false)
+                    throw new Exception("The option '$inswitch_userkey' needs a key-value pair. E.g. '-$inswitch_userkey option=value'");
+                GETOPT_setval($opts, $options, $inswitch_key, explode('=', $fromarr[$i]));
+                $inswitch = GETOPT_NOTSWITCH; // Reset the reader to carry on reading normal stuff
+                break;
+            case GETOPT_NOTSWITCH: // General invokation of no previously complex cmdline options (i.e. i have no idea what to expect next)
+                if (substr($fromarr[$i], 0, 1) == '-') {
+                    // Probably the start of a switch
+                    if ((strlen($fromarr[$i]) == 2) || (substr($fromarr[$i], 0, 2) == '--')) { // Single switch OR long opt (might be a weird thing like VAL, MULTIVAL etc.)
+                        $userkey = ltrim($fromarr[$i], '-');
+                        if (!isset($optionslookup[$userkey]))
+                            throw new Exception("Unknown option '-$userkey'\n");
+                        $hashkey = $optionslookup[$userkey]; // Replace with the REAL key
+                        if (($options[$hashkey]['type'] == GETOPT_SWITCH) || ($options[$hashkey]['type'] == GETOPT_ACCUMULATE)) {
+                            GETOPT_setval($opts, $options, $hashkey, 1); // Simple enough - Single option specified in switch that needs no params.
+                        } else { // OK the option needs a value. This is where the fun begins
+                            $inswitch = $options[$hashkey]['type']; // Set so the next process cycle will pick it up
+                            $inswitch_key = $hashkey;
+                            $inswitch_userkey = $userkey;
+                        }
+                    } else {
+                        // Multiple letters. Probably a bundling
+                        for ($o = 1; $o < strlen($fromarr[$i]); $o++) {
+                            $hashkey = substr($fromarr[$i], $o, 1);
+                            if (!isset($optionslookup[$hashkey]))
+                                throw new Exception("Unknown option '-$hashkey'\n");
+                            if (($options[$optionslookup[$hashkey]]['type'] != GETOPT_SWITCH) && ($options[$optionslookup[$hashkey]]['type'] != GETOPT_ACCUMULATE))
+                                throw new Exception("Option '-$hashkey' requires a value.\n");
+                            GETOPT_setval($opts, $options, $optionslookup[$hashkey], 1);
+                        }
+                    }
+                } else {
+                    $opts['cmdline'][] = $fromarr[$i]; // Just detritus on the cmdline
+                }
+                break;
+        }
+    }
+    return $opts;
 }
 
-function GETOPT_setval(&$opts,&$options,$key,$value) {
-	switch ($options[$key]['type']) {
-		case GETOPT_VAL:
-		case GETOPT_SWITCH:
-			$opts[$key] = $value;
-				break;
-		case GETOPT_ACCUMULATE:
-			$opts[$key]++;
-				break;
-		case GETOPT_MULTIVAL:
-			$opts[$key][] = $value;
-			break;
-		case GETOPT_KEYVAL:
-			$opts[$key][$value[0]] = $value[1];
-	}
+function GETOPT_setval(&$opts, &$options, $key, $value)
+{
+    switch ($options[$key]['type']) {
+        case GETOPT_VAL:
+        case GETOPT_SWITCH:
+            $opts[$key] = $value;
+            break;
+        case GETOPT_ACCUMULATE:
+            $opts[$key]++;
+            break;
+        case GETOPT_MULTIVAL:
+            $opts[$key][] = $value;
+            break;
+        case GETOPT_KEYVAL:
+            $opts[$key][$value[0]] = $value[1];
+    }
 }

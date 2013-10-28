@@ -192,6 +192,7 @@ TXT
             );
             $tmpInstance = $response->body->DescribeDBInstancesResult->DBInstances[0]->DBInstance;
             $status = $this->_fixGet($tmpInstance, 'DBInstanceStatus');
+            // TODO reverse this check, this way may loop forever if unpredicted status is returned
             if (in_array($status, array('available'))) {
                 break;
             }

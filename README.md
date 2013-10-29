@@ -135,6 +135,7 @@ xtBackup uses following libraries:
 
 * [SQLite](http://www.sqlite.org/)
 * [AWS SDK for PHP](https://github.com/amazonwebservices/aws-sdk-for-php)
+* [PHP-GetOpts](https://github.com/hash-bang/PHP-GetOpts)
 
 License
 -------

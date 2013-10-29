@@ -47,19 +47,15 @@ TXT
         ),
         'force' => array('switch' => array('f', 'force'), 'type' => GETOPT_SWITCH, 'help' => 'will not prompt user to approve restore'),
         'quite' => array('switch' => array('q', 'quite'), 'type' => GETOPT_SWITCH, 'help' => 'will not print messages'),
+        'log-process' => array('switch' => array('log-process'), 'type' => GETOPT_VAL, 'default' => 1, 'help' => 'print messages describing restore process (0=off, 1=on)'),
+        'log-sql-warn' => array('switch' => array('log-sql-warn'), 'type' => GETOPT_VAL, 'default' => 1, 'help' => 'print MySQL server warning messagesv (0=off, 1=on)'),
+        'log-sql-exec' => array('switch' => array('log-sql-exec'), 'type' => GETOPT_VAL, 'default' => 2, 'help' => 'print executed SQL statements (0=off, 1=all, 2=if SQL warning found)'),
         'help' => array('switch' => array('?', 'help'), 'type' => GETOPT_SWITCH, 'help' => 'display instruction how to use cli.php'),
-        /*        'action' => array('switch' => array('a', 'action'), 'type' => GETOPT_VAL, 'help' => 'what action to run'),
-                'params' => array('switch' => 'p', 'type' => GETOPT_KEYVAL, 'help' => 'set request parameters'),
-                'cronList' => array('switch' => array('l', 'cron-list'), 'type' => GETOPT_SWITCH, 'help' => 'list all actions marked for scheduling'),
-                'verbose' => array('switch' => array('v', 'verbose'), 'type' => GETOPT_SWITCH, 'help' => 'enable output of PHP errors, this option overides php.ini and application.ini settings - Important to enable if you running code that failing in cli and you getting no errors'),
-                'help' => array('switch' => array('h', 'help'), 'type' => GETOPT_SWITCH, 'help' => 'display instruction how to use cli.php'),
-                'apache' => array('switch' => array('A', 'env-from-apache'), 'type' => GETOPT_MULTIVAL, 'help' =>'parse apache virtual host configuration file (may be used several times)'),
-                'info' => array('switch' => array('i', 'info'), 'type' => GETOPT_SWITCH, 'help' => 'bootstrap application, show loaded configuration and exit without running the application'),*/
     );
     $opts = getopts($options, $_SERVER['argv']);
 } catch (Exception $e) {
     help($options);
-    echo $e->getMessage() . "\n\n";
+    echo $e->getMessage() . PHP_EOL . PHP_EOL;
     exit;
 }
 
@@ -185,8 +181,11 @@ class RestoreMysql
             $this->_opts['database'] = $this->_originalDbName;
         }
 
-        // prepare timer
+        // prepare logger and timer
         $this->_log = new Log(!$opts['quite']);
+        $this->_log->setOutput('log-process', $opts['log-process']);
+        $this->_log->setOutput('log-sql-warn', $opts['log-sql-warn']);
+        $this->_log->setOutput('log-sql-exec', $opts['log-sql-exec']);
     }
 
     protected function _fixFolderName($folder)
@@ -278,7 +277,7 @@ class RestoreMysql
      */
     public function getInfo()
     {
-        return "backup";
+        // TODO print out information about backup data
     }
 
     protected function _connectMysql()
@@ -761,6 +760,8 @@ SQL
 //////////////////////////////////////
 function help($opts, $message = false)
 {
+    echo "xtbackup MySQL Restore (http://github.com/k2s/xtbackup)" . PHP_EOL . PHP_EOL;
+
     $cmdName = basename(__FILE__);
     echo "Run with interpreter: php -f {$cmdName}.php -- [<parameters>] [<backup folder>]\n";
     echo "Example: php -f cli.php -- -D newdb /tmp/backup\n";
@@ -810,48 +811,36 @@ class DbWrapper
      * @var Log
      */
     private $_log;
-    /**
-     * @var bool
-     */
-    private $_printSql;
 
-    public function __construct(PDO $db, $log, $printSql = false)
+    public function __construct(PDO $db, $log)
     {
         $this->_db = $db;
         $this->_log = $log;
-        $this->_printSql = $printSql;
     }
 
     public function exec($sql)
     {
-        if ($this->_printSql) {
-            $this->_log->log(">$sql");
-        }
+        $this->_log->sql($sql);
         return $this->_checkWarnings($this->_db->exec($sql));
     }
 
     public function query($sql)
     {
-        if ($this->_printSql) {
-            $this->_log->log("-- SQL\n$sql\n-- SQL\n");
-
-        }
+        $this->_log->sql($sql);
         return $this->_checkWarnings($this->_db->query($sql));
     }
 
-    protected function _checkWarnings($ret) {
+    protected function _checkWarnings($ret)
+    {
         $warnings = $this->_db->query('SHOW WARNINGS')->fetchAll();
         if (count($warnings)) {
             $c = 0;
             foreach ($warnings as $w) {
-                if ($w["Level"]!=="Note") {
-                    $this->_log->log("#$w[Level]: $w[Message]");
+                if ($w["Level"] !== "Note") {
+                    $this->_log->sqlWarn("$w[Level]: $w[Message]");
                     $c++;
                 }
             }
-//            if ($c) {
-//                die("DDDDDDD");
-//            }
         }
         return $ret;
     }
@@ -865,38 +854,96 @@ class Log
     protected $_doEcho;
     protected $_taskLevel = 0;
     protected $_prefix = "";
+    protected $_output;
+    protected $_wrap = "log-process";
+    protected $_sql = "";
 
     public function __construct($echo, $taskLevel = 0)
     {
         $this->_doEcho = $echo;
-        $this->_taskLevel = $taskLevel;
-        $this->_prefix = str_repeat("\t", $this->_taskLevel);
+        $this->setTaskLevel($taskLevel);
     }
 
     public function __destruct()
     {
         if ($this->_text !== false && $this->_taskLevel == 0) {
-            echo '!!! incorrect log shutdown' . PHP_EOL;
-            echo sprintf("%s ... duration %f second(s)", $this->_text, $this->get()) . PHP_EOL;
+            $this->_out('!!! incorrect log shutdown' . PHP_EOL);
+            $this->_out(sprintf("%s ... duration %f second(s)", $this->_text, $this->get()) . PHP_EOL);
+        }
+    }
+
+    public function setTaskLevel($taskLevel)
+    {
+        $this->_taskLevel = $taskLevel;
+        $this->_prefix = str_repeat("\t", $this->_taskLevel);
+    }
+
+    public function setOutput($kind, $value)
+    {
+        $this->_output[$kind] = $value;
+    }
+
+    public function wrapOutput($kind, $func)
+    {
+        $old = $this->_wrap;
+        $this->_wrap = $kind;
+        $func();
+        $this->_wrap = $old;
+    }
+
+    protected function _out($s)
+    {
+        if ($this->_output[$this->_wrap]) {
+            echo $s;
         }
     }
 
     public function subtask()
     {
-        //$this->_echo();
-        $task = new Log($this->_doEcho, $this->_taskLevel + 1);
+//        $task = new Log($this->_doEcho, $this->_taskLevel + 1);
+        $task = clone $this;
+        $task->setTaskLevel($this->_taskLevel + 1);
         return $task;
     }
 
     public function log($message)
     {
-        echo $this->_prefix . $message . PHP_EOL;
+        $this->_out($this->_prefix . $message . PHP_EOL);
+    }
+
+    public function sql($sql)
+    {
+        $s = "-- SQL\n$sql\n-- SQL\n";
+        if ($this->_output['log-sql-exec'] === 1) {
+            $this->wrapOutput('log-sql-exec', function () use ($s) {
+                $this->log($s);
+            });
+        } else {
+            $this->_sql = $s;
+        }
+    }
+
+    public function sqlWarn($msg)
+    {
+        if ($this->_output['log-sql-warn']) {
+            if ($this->_sql) {
+                if ($this->_output['log-sql-exec'] === 2) {
+                    $this->wrapOutput('log-sql-exec', function () {
+                        $this->log($this->_sql);
+                    });
+                }
+                $this->_sql = "";
+            }
+            $this->wrapOutput('log-sql-warn', function () use ($msg) {
+                $this->log("#" . $msg);
+            });
+        }
     }
 
     protected function _echo()
     {
         if ($this->_doEcho && $this->_text !== false) {
-            echo sprintf("%s ... duration %f second(s)", $this->_prefix . $this->_text, $this->get()) . PHP_EOL;
+            $this->_out(sprintf("%s ... duration %f second(s)", $this->_prefix . $this->_text, $this->get()) . PHP_EOL);
         }
         $this->_text = false;
     }
@@ -913,7 +960,7 @@ class Log
         $this->_text = $text;
 
         if ($echoOnStart && $this->_doEcho && $this->_text !== false) {
-            echo $this->_prefix . $this->_text . ' ... START' . PHP_EOL;
+            $this->_out($this->_prefix . $this->_text . ' ... START' . PHP_EOL);
         }
 
         return $this;

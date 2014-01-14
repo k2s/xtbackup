@@ -534,8 +534,20 @@ TXT
 
     public function getMd5($path)
     {
-        $v = $this->_s3->get_object_headers($this->getBucket(), $path);
-        if (!array_key_exists('etag', $v->header)) {
+        $v = null;
+        $retries = 3;
+        do {
+            try {
+                $v = $this->_s3->get_object_headers($this->getBucket(), $path);
+                $retries = 0;
+            } catch (Exception $e) {
+                $this->_out->logWarning("retry S3::getMd5() for $path");
+                usleep(200);
+                $retries--;
+            }
+        } while ($retries !== 0);
+
+        if ($v === null || !array_key_exists('etag', $v->header)) {
             return false;
         }
         $md5 = str_replace('"', '', (string)$v->header['etag']);

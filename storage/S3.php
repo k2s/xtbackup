@@ -25,7 +25,7 @@ class Storage_S3 implements Storage_Interface
      * @var Output_Stack
      */
     protected $_out;
-    
+
     protected $_defaultRedundancyStorage = AmazonS3::STORAGE_STANDARD;
     /**
      * Identification of the object, it is the key from INI file
@@ -48,13 +48,13 @@ class Storage_S3 implements Storage_Interface
      * @var string
      */
     protected $_baseDir = null;
-    
+
     protected $_itemCount = 0;
 
     /**
-     * @param Core_Engine  $engine
+     * @param Core_Engine $engine
      * @param Output_Stack $output
-     * @param array        $options
+     * @param array $options
      *
      * @return \Storage_S3
      */
@@ -106,7 +106,7 @@ class Storage_S3 implements Storage_Interface
         if (!isset($this->_options['key']['secret'])) {
             throw new Core_StopException("You have to define S3 option key.secret.", "S3Init");
         }
-        if (!is_null($this->_options['multipart']['part-size']) && ($this->_options['multipart']['part-size'] < 5  ||  $this->_options['multipart']['part-size'] > 5120)) {
+        if (!is_null($this->_options['multipart']['part-size']) && ($this->_options['multipart']['part-size'] < 5 || $this->_options['multipart']['part-size'] > 5120)) {
             throw new Core_StopException(
                 "multipart.part-size has to be in range from 5MB to 500MB. It is Amazon S3 restriction. Current value is {$this->_options['multipart']['part-size']}MB.",
                 "S3Init"
@@ -117,13 +117,13 @@ class Storage_S3 implements Storage_Interface
         // TODO we need better AmazonS3 error handling
         $this->_s3 = new AmazonS3(
             array(
-                 'key'    => $this->_options['key']['access'],
-                 'secret' => $this->_options['key']['secret']
+                'key' => $this->_options['key']['access'],
+                'secret' => $this->_options['key']['secret']
             )
         );
         if (false == $this->_s3->if_bucket_exists($this->getBucket())) {
             $this->_out->jobEnd($job, "failed");
-            throw new Core_StopException("S3 bucket not found: '{$this->getBucket()}' for access key '".substr($this->_options['key']['access'], 0, 5)."...'", "S3Init");
+            throw new Core_StopException("S3 bucket not found: '{$this->getBucket()}' for access key '" . substr($this->_options['key']['access'], 0, 5) . "...'", "S3Init");
         }
         $this->_out->jobEnd($job, "authorized");
 
@@ -132,7 +132,7 @@ class Storage_S3 implements Storage_Interface
         if (!$versioning->isOK()) {
             throw new Core_StopException("Not possible to get versioning status of S3 bucket.", "S3Init");
         }
-        $this->_versioningEnabled = $versioning->body->Status=="Enabled";
+        $this->_versioningEnabled = $versioning->body->Status == "Enabled";
         if (!$this->_versioningEnabled) {
             $priority = $this->_options['warn-versioning'] ? Output_Stack::WARNING : Output_Stack::DEBUG;
             $this->_out->log(
@@ -142,7 +142,7 @@ class Storage_S3 implements Storage_Interface
         }
         if (array_key_exists('defaultRedundancyStorage', $this->_options)) {
             if (is_string($this->_options['defaultRedundancyStorage'])) {
-                $this->_defaultRedundancyStorage = constant("AmazonS3::".$this->_options['defaultRedundancyStorage']);
+                $this->_defaultRedundancyStorage = constant("AmazonS3::" . $this->_options['defaultRedundancyStorage']);
             }
         }
         return true;
@@ -181,28 +181,28 @@ class Storage_S3 implements Storage_Interface
         } else {
             $this->_out->logNotice("update requested by user");
         }
-        
+
         //we do not suppose to enable this functionality
         //$this->changeRedundancy();
 
         $job = $this->_out->jobStart("downloading info about files stored in Amazon S3");
         $this->_out->jobSetProgressStep($job, 100);
-        
+
         // let compare driver know that we are starting
         $compare->updateFromRemoteStart();
-        
+
         $this->_list(array($this, "_refreshRemote"), array('compare' => $compare, 'job' => $job));
         // let compare driver know that we are done
         $compare->updateFromRemoteEnd();
 
         $this->_out->jobEnd($job, "downloaded info about {$this->_itemCount} files");
     }
-    
+
     /**
      * lists bucket's objects, applying callback to each of them
-     * 
+     *
      * @param mixed $callback first argument of the callback is CFSimpleXML object
-     * @param array $params 
+     * @param array $params
      */
     protected function _list($callback, $params = array())
     {
@@ -212,14 +212,14 @@ class Storage_S3 implements Storage_Interface
         $marker = '';
         $itemCount = 0;
         $v = false;
-        
+
         $firstBatch = true;
         do {
             $list = $this->_s3->list_objects(
                 $bucket,
                 array(
-                     'marker' => $marker,
-                     'prefix' => $baseDir,
+                    'marker' => $marker,
+                    'prefix' => $baseDir,
                 )
             );
 
@@ -258,11 +258,11 @@ class Storage_S3 implements Storage_Interface
             $metaId = 0;
             foreach ($list->body->Contents as $v) {
                 switch (true) {
-                    case is_array ($callback):
-                    case is_string ($callback):
+                    case is_array($callback):
+                    case is_string($callback):
                         call_user_func($callback, $v, $params);
                         break;
-                    case is_callable ($callback):
+                    case is_callable($callback):
                         $callback($v, $params);
                         break;
                 }
@@ -272,10 +272,10 @@ class Storage_S3 implements Storage_Interface
             // move to next batch of files
             $marker = $v->Key;
             $firstBatch = false;
-        } while ((string) $list->body->IsTruncated == 'true');
-        
+        } while ((string)$list->body->IsTruncated == 'true');
+
     }
-    
+
     protected function _refreshRemote($v, $params)
     {
         $fsObject = $this->_createFsObject($v, null);
@@ -293,13 +293,13 @@ class Storage_S3 implements Storage_Interface
      *
      * @return Core_FsObject
      */
-    public function _createFsObject($v, $meta=null)
+    public function _createFsObject($v, $meta = null)
     {
-        $path = (string) $v->Key;
+        $path = (string)$v->Key;
 
         // $path ends with '/' or $path ends with '_$folder$'
         $isDir = ('/' == substr($path, -1)) || ('_$folder$' == substr($path, 9));
-        $obj = new Core_FsObject($path, $isDir, (float)$v->Size, (string) $v->LastModified, str_replace('"', '', (string)$v->ETag));
+        $obj = new Core_FsObject($path, $isDir, (float)$v->Size, (string)$v->LastModified, str_replace('"', '', (string)$v->ETag));
         //$obj->setLastSyncWithLocal(isset($meta->header['x-amz-meta-localts']) ? $meta->header['x-amz-meta-localts'] : null);
 
         return $obj;
@@ -339,7 +339,7 @@ class Storage_S3 implements Storage_Interface
             }
             $simulate = false;
         }
-        
+
         /** @var $compare Compare_Interface */
         $compare = $drivers['compare'];
         /** @var $local Storage_Interface */
@@ -355,8 +355,7 @@ class Storage_S3 implements Storage_Interface
             try {
                 $path = $this->_getPathWithBasedir($task->path, self::ADD_BASE_DIR);
 
-                switch ($task->action)
-                {
+                switch ($task->action) {
                     case Compare_Interface::CMD_MKDIR:
                         $this->_out->logDebug("mkdir " . $path . " into s3 bucket");
                         if (!$simulate) {
@@ -364,8 +363,8 @@ class Storage_S3 implements Storage_Interface
                             $this->_s3->create_object(
                                 $this->getBucket(), $path,
                                 array(
-                                     'body' => '',
-                                     'storage' => $this->_defaultRedundancyStorage
+                                    'body' => '',
+                                    'storage' => $this->_defaultRedundancyStorage
                                 )
                             );
                         }
@@ -389,8 +388,8 @@ class Storage_S3 implements Storage_Interface
                                 $this->_s3->create_object(
                                     $this->getBucket(), $path,
                                     array(
-                                         'body' => '',
-                                         'storage' => $this->_defaultRedundancyStorage
+                                        'body' => '',
+                                        'storage' => $this->_defaultRedundancyStorage
                                     )
                                 );
                             } else {
@@ -492,30 +491,30 @@ should upload/remove of data be executed ? (yes/no/simulate)
   no:       will not start update process
   simulate: will output progress, but will not really transfer data
 TXT
-                ,
+            ,
                 'compatibility-test' => <<<TXT
 Find out if yur PC is compatible with Amazon PHP SDK, it will always stop the application if enabled.
 TXT
-                ,
+            ,
 
                 'key.access' => <<<TXT
 S3 authentification key
 Best practice is to place this option into separate INI file readable only by user executing backup.
 TXT
-                ,
+            ,
                 'key.secret' => <<<TXT
 S3 authentification key
 Best practice is to place this option into separate INI file readable only by user executing backup.
 TXT
-                ,
+            ,
                 'multipart.big-files' => <<<TXT
 TRUE/FALSE enable multipart upload of big files. It speeds up upload.
 TXT
-                ,
+            ,
                 'multipart.part-size' => <<<TXT
 The size of an individual part. The size may not be smaller than 5 MB or larger than 500 MB. The default value is 50 MB.
 TXT
-                ,
+            ,
                 'warn-versioning' => <<<TXT
 If S3 bucket versioning is disabled you will not be able to restore older versions of files.
 FALSE will suppress warnings in case that it is disabled.
@@ -523,7 +522,7 @@ TXT
 
 
             ),
-            CfgPart::REQUIRED => array('bucket'=>true, 'key.access'=>true, 'key.secret'=>true)
+            CfgPart::REQUIRED => array('bucket' => true, 'key.access' => true, 'key.secret' => true)
         );
 
         if (is_null($part)) {
@@ -539,7 +538,7 @@ TXT
         if (!array_key_exists('etag', $v->header)) {
             return false;
         }
-        $md5 = str_replace('"', '', (string) $v->header['etag']);
+        $md5 = str_replace('"', '', (string)$v->header['etag']);
         return $md5;
     }
 
@@ -547,7 +546,7 @@ TXT
     {
         return $path;
     }
-    
+
     /*
      * We do not suppose to enable the functionality
      * 
@@ -591,7 +590,7 @@ TXT
         
         $this->_out->logNotice("redundancy storage changed for: $filename");
     }*/
-    
+
     public function setBasedir($value)
     {
         $this->_baseDir = $value;

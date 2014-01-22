@@ -1,4 +1,5 @@
 <?php
+
 class Compare_Sqlite implements Compare_Interface, Iterator
 {
     /**
@@ -94,7 +95,7 @@ class Compare_Sqlite implements Compare_Interface, Iterator
 
     public function init($myrole, $drivers)
     {
-        $this->_out->logNotice(">>>init ".get_class($this)." compare driver");
+        $this->_out->logNotice(">>>init " . get_class($this) . " compare driver");
 
         $this->_out->logDebug("opening DB file: " . $this->_options['file']);
         $this->_open();
@@ -122,38 +123,38 @@ class Compare_Sqlite implements Compare_Interface, Iterator
 
         // prepared statements
         $this->_prepFromRemote2 = $this->_db->prepare($this->_sql(
-                                                          "INSERT INTO {$this->_prefix} (path, isDir, remote, rmd5, rtime, rsize) VALUES(:path, :isDir, :isRemote, :md5, :time, :size)", "prepare SQL: "
-                                                      ));
+            "INSERT INTO {$this->_prefix} (path, isDir, remote, rmd5, rtime, rsize) VALUES(:path, :isDir, :isRemote, :md5, :time, :size)", "prepare SQL: "
+        ));
         $this->_prepFromRemote1 = $this->_db->prepare($this->_sql(
-                                                          "UPDATE {$this->_prefix} SET isDir=:isDir, remote=:isRemote, rsize=:size, rmd5=:md5, rtime=:time WHERE path=:path", "prepare SQL: "
-                                                      ));
+            "UPDATE {$this->_prefix} SET isDir=:isDir, remote=:isRemote, rsize=:size, rmd5=:md5, rtime=:time WHERE path=:path", "prepare SQL: "
+        ));
         $this->_prepFromLocalFull2 = $this->_db->prepare($this->_sql(
-                                                             "INSERT INTO {$this->_prefix} (path, isDir, local, lmd5, ltime, lsize) VALUES(:path, :isDir, :isLocal, :md5, :time, :size)", "prepare SQL: "
-                                                         ));
+            "INSERT INTO {$this->_prefix} (path, isDir, local, lmd5, ltime, lsize) VALUES(:path, :isDir, :isLocal, :md5, :time, :size)", "prepare SQL: "
+        ));
         $this->_prepFromLocalFull1 = $this->_db->prepare($this->_sql(
-                                                             "UPDATE {$this->_prefix} SET isDir=:isDir, local=:isLocal, lsize=:size, lmd5=:md5, ltime=:time WHERE path=:path", "prepare SQL: "
-                                                         ));
+            "UPDATE {$this->_prefix} SET isDir=:isDir, local=:isLocal, lsize=:size, lmd5=:md5, ltime=:time WHERE path=:path", "prepare SQL: "
+        ));
         $this->_prepFromLocal2 = $this->_db->prepare($this->_sql(
-                                                         "INSERT INTO {$this->_prefix} (path, isDir, local, ltime, lsize) VALUES(:path, :isDir, :isLocal, :time, :size)", "prepare SQL: "
-                                                     ));
+            "INSERT INTO {$this->_prefix} (path, isDir, local, ltime, lsize) VALUES(:path, :isDir, :isLocal, :time, :size)", "prepare SQL: "
+        ));
         $this->_prepFromLocal1 = $this->_db->prepare($this->_sql(
-                                                         "UPDATE {$this->_prefix} SET isDir=:isDir, local=:isLocal, lsize=:size, ltime=:time WHERE path=:path", "prepare SQL: "
-                                                     ));
+            "UPDATE {$this->_prefix} SET isDir=:isDir, local=:isLocal, lsize=:size, ltime=:time WHERE path=:path", "prepare SQL: "
+        ));
 
         $this->_prepFromLocalMd5 = $this->_db->prepare($this->_sql(
-                                                           "UPDATE {$this->_prefix} SET lmd5=:md5 WHERE path=:path", "prepare SQL: "
-                                                       ));
+            "UPDATE {$this->_prefix} SET lmd5=:md5 WHERE path=:path", "prepare SQL: "
+        ));
         $this->_prepFromRemoteMd5 = $this->_db->prepare($this->_sql(
-                                                           "UPDATE {$this->_prefix} SET rmd5=:md5, rts=CASE WHEN rts is null THEN ltime ELSE rts END WHERE path=:path", "prepare SQL: "
-                                                       ));
+            "UPDATE {$this->_prefix} SET rmd5=:md5, rts=CASE WHEN rts is null THEN ltime ELSE rts END WHERE path=:path", "prepare SQL: "
+        ));
 
         // remote has done updates
         $this->_prepRemoteHasDeleted = $this->_db->prepare($this->_sql(
-                                                               "DELETE FROM {$this->_prefix} WHERE path=:path", "prepare SQL: "
-                                                           ));
+            "DELETE FROM {$this->_prefix} WHERE path=:path", "prepare SQL: "
+        ));
         $this->_prepRemoteHasUploaded = $this->_db->prepare($this->_sql(
-                                                                "UPDATE {$this->_prefix} SET remote=1, rmd5=lmd5, rsize=lsize, rts=ltime WHERE path=:path", "prepare SQL: "
-                                                            ));
+            "UPDATE {$this->_prefix} SET remote=1, rmd5=lmd5, rsize=lsize, rts=ltime WHERE path=:path", "prepare SQL: "
+        ));
     }
 
     function wasAlreadyUpdatedFrom($role)
@@ -228,8 +229,7 @@ class Compare_Sqlite implements Compare_Interface, Iterator
         if (!$this->_db->exec($this->_sql($sql))) {
             // TODO send error message to out
             $this->_out->stop("Sqlite exec error");
-        }
-        ;
+        };
     }
 
     public function updateFromRemoteStart()
@@ -329,6 +329,10 @@ class Compare_Sqlite implements Compare_Interface, Iterator
 
         // update missing md5 for remote files where needed
         $this->_out->logNotice(">>>starting update md5 of remote files ...");
+        $resCount = $this->_db->querySingle($this->_sql(<<<SQL
+        SELECT count(*) FROM {$this->_prefix} WHERE isdir=0 and local and remote and rmd5 is null and (rts<>ltime or rts is null)
+SQL
+        ));
         $stmt = $this->_db->query($this->_sql(<<<SQL
 SELECT path FROM {$this->_prefix} WHERE isdir=0 and local and remote and rmd5 is null and (rts<>ltime or rts is null)
 SQL
@@ -336,10 +340,9 @@ SQL
         /** @var $driver Storage_Interface */
         $driver = $drivers['remote'];
         $counter = 0;
-        $job = $this->_out->jobStart("we need to calculate md5 for files");
+        $job = $this->_out->jobStart("we need to calculate md5 for $resCount remote files");
         $this->_out->jobSetProgressStep($job, 50);
-        while ($row = $stmt->fetchArray())
-        {
+        while ($row = $stmt->fetchArray()) {
             $fullPath = $driver->getBaseDir() . $row['path'];
             $this->_out->logDebug($fullPath);
 
@@ -355,9 +358,12 @@ SQL
         $this->_out->jobEnd($job, "md5 calculated for $counter files");
 
 
-
         // update missing md5 for local files where needed
         $this->_out->logNotice(">>>starting update md5 of local files ...");
+        $resCount = $this->_db->querySingle($this->_sql(<<<SQL
+SELECT count(*) FROM {$this->_prefix} WHERE isdir=0 and local and remote and (rts<>ltime or rts is null)
+SQL
+        ));
         $stmt = $this->_db->query($this->_sql(<<<SQL
 SELECT path FROM {$this->_prefix} WHERE isdir=0 and local and remote and (rts<>ltime or rts is null)
 SQL
@@ -365,10 +371,9 @@ SQL
 
         $driver = $drivers['local'];
         $counter = 0;
-        $job = $this->_out->jobStart("we need to calculate md5 for files");
+        $job = $this->_out->jobStart("we need to calculate md5 for $resCount local files");
         $this->_out->jobSetProgressStep($job, 50);
-        while ($row = $stmt->fetchArray())
-        {
+        while ($row = $stmt->fetchArray()) {
             $fullPath = $driver->getBaseDir() . $row['path'];
             $this->_out->logDebug($fullPath);
 
@@ -444,8 +449,7 @@ SQL;
 
     public function remoteHasDone($task)
     {
-        switch ($task->action)
-        {
+        switch ($task->action) {
             case self::CMD_PUT:
                 $this->_prepRemoteHasUploaded->bindValue(":path", $task->path);
                 $this->_prepRemoteHasUploaded->execute();
@@ -494,12 +498,12 @@ SQL;
     static public function getConfigOptions($part = null)
     {
         $opt = array(
-            CfgPart::HINTS =>array(
-                'testing' => array(CfgPart::HINT_TYPE=>CfgPart::TYPE_BOOL),
-                'rebuild' => array(CfgPart::HINT_TYPE=>CfgPart::TYPE_BOOL),
-                'keep' => array(CfgPart::HINT_TYPE=>CfgPart::TYPE_BOOL),
-                'compare' => array(CfgPart::HINT_TYPE=>CfgPart::TYPE_BOOL),
-                'file' => array(CfgPart::HINT_TYPE=>CfgPart::TYPE_PATH)
+            CfgPart::HINTS => array(
+                'testing' => array(CfgPart::HINT_TYPE => CfgPart::TYPE_BOOL),
+                'rebuild' => array(CfgPart::HINT_TYPE => CfgPart::TYPE_BOOL),
+                'keep' => array(CfgPart::HINT_TYPE => CfgPart::TYPE_BOOL),
+                'compare' => array(CfgPart::HINT_TYPE => CfgPart::TYPE_BOOL),
+                'file' => array(CfgPart::HINT_TYPE => CfgPart::TYPE_PATH)
             ),
             CfgPart::DEFAULTS => array(
                 'testing' => false,
@@ -516,8 +520,8 @@ SQL;
                 'compare' => 'should compare be executed ?',
                 'file' => 'path and file name of sqlite database file to use'
             ),
-            CfgPart::REQUIRED => array('file'=>true),
-            CfgPart::SUGGESTED => array('testing'=>true, 'keep'=>true, 'rebuild'=>true),
+            CfgPart::REQUIRED => array('file' => true),
+            CfgPart::SUGGESTED => array('testing' => true, 'keep' => true, 'rebuild' => true),
         );
 
         if (is_null($part)) {

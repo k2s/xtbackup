@@ -144,7 +144,7 @@ class Compare_Sqlite implements Compare_Interface, Iterator
                                                            "UPDATE {$this->_prefix} SET lmd5=:md5 WHERE path=:path", "prepare SQL: "
                                                        ));
         $this->_prepFromRemoteMd5 = $this->_db->prepare($this->_sql(
-                                                           "UPDATE {$this->_prefix} SET rmd5=:md5 WHERE path=:path", "prepare SQL: "
+                                                           "UPDATE {$this->_prefix} SET rmd5=:md5, rts=CASE WHEN rts is null THEN ltime ELSE rts END WHERE path=:path", "prepare SQL: "
                                                        ));
 
         // remote has done updates

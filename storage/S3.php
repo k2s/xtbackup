@@ -263,6 +263,7 @@ class Storage_S3 implements Storage_Interface
                         call_user_func($callback, $v, $params);
                         break;
                     case is_callable($callback):
+                        /** @var $callback Closure */
                         $callback($v, $params);
                         break;
                 }
@@ -483,7 +484,7 @@ class Storage_S3 implements Storage_Interface
                 'certificate_authority' => 'see https://forums.aws.amazon.com/ann.jspa?annID=1005',
                 'bucket' => 'Amazon S3 bucket name',
                 'defaultRedundancyStorage' => 'STORAGE_STANDARD or STORAGE_REDUCED',
-                'basedir' => 'base directory in bucket to compare with local',
+                'basedir' => 'base directory in bucket to compare with local, make sure it doesn\'t start with slash (/)',
                 'refresh' => 'read actual data from S3 and feed compare driver ? (yes/no/never)',
                 'update' => <<<TXT
 should upload/remove of data be executed ? (yes/no/simulate)

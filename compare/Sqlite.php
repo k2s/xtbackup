@@ -28,6 +28,13 @@ class Compare_Sqlite implements Compare_Interface, Iterator
      */
     protected $_db;
 
+//    /**
+//     * Contains counts of actions that need to be executed
+//     *
+//     * @var array
+//     */
+//    protected $_countInfo;
+
     /**
      * Prefix used for storage
      *
@@ -409,6 +416,25 @@ SQL
                 $cmdMkdir = self::CMD_MKDIR;
                 $cmdTs = self::CMD_TS;
                 $cmdPut = self::CMD_PUT;
+
+                // count actions
+                $sql = <<<SQL
+SELECT '$cmdDelete' as action, count(*) FROM {$this->_prefix} WHERE remote and local=0
+UNION
+SELECT '$cmdMkdir' as action , count(*)FROM {$this->_prefix} WHERE isdir=1 and local and remote=0
+UNION
+SELECT '$cmdPut' as action, count(*) FROM {$this->_prefix} WHERE isdir<>1 and local and (remote=0 or rsize<>lsize or rmd5!=lmd5)
+UNION
+SELECT '$cmdTs' as action, count(*) FROM {$this->_prefix} WHERE isdir<>1 and local and remote and rmd5=lmd5 and (rts is null or rts<>ltime)
+SQL;
+                $result = $this->_db->query($sql);
+//                $this->_countInfo = array();
+                while ($res = $result->fetchArray(SQLITE3_NUM)) {
+                    $this->_out->logNotice("will execute $res[1] time command $res[0]");
+//                    $this->_countInfo[$res[0]] = $res[1];
+                }
+
+                // prepare result iteration
                 $sql = <<<SQL
 SELECT path, ltime, '$cmdDelete' as action FROM {$this->_prefix} WHERE remote and local=0
 UNION

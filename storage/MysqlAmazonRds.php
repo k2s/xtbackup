@@ -159,7 +159,7 @@ TXT
         if ($this->_options['tempname']) {
             $tempName = $this->_options['tempname'];
         } else {
-            $tempName = $this->_fixGet($instance, 'DBName')."-BAK";
+            $tempName = $this->_fixGet($instance, 'DBInstanceIdentifier')."-BAK";
         }
 
         $response = $rds->describe_db_instances(

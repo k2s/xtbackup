@@ -353,12 +353,14 @@ class Storage_S3 implements Storage_Interface
         $job = $this->_out->jobStart("updating remote storage");
         $this->_out->jobSetProgressStep($job, 1000);
         foreach ($compare as $task) {
+            $msg = "";
             try {
                 $path = $this->_getPathWithBasedir($task->path, self::ADD_BASE_DIR);
 
                 switch ($task->action) {
                     case Compare_Interface::CMD_MKDIR:
-                        $this->_out->logDebug("mkdir " . $path . " into s3 bucket");
+                        $msg = "mkdir " . $path . " into s3 bucket";
+                        $this->_out->logDebug($msg);
                         if (!$simulate) {
                             // create folders
                             $this->_s3->create_object(
@@ -371,7 +373,8 @@ class Storage_S3 implements Storage_Interface
                         }
                         break;
                     case Compare_Interface::CMD_PUT:
-                        $this->_out->logDebug("put " . $path . " into s3 bucket");
+                        $msg = "put " . $path . " into s3 bucket";
+                        $this->_out->logDebug($msg);
                         $uploadPath = $local->getBaseDir() . $task->path;
 
                         //fix for windows encoding issue
@@ -410,7 +413,8 @@ class Storage_S3 implements Storage_Interface
                         }
                         break;
                     case Compare_Interface::CMD_DELETE:
-                        $this->_out->logDebug("deleting " . $path . " from s3 bucket");
+                        $msg = "deleting " . $path . " from s3 bucket";
+                        $this->_out->logDebug($msg);
                         if (!$simulate) {
                             $this->_s3->delete_object(
                                 $this->getBucket(), $path
@@ -434,6 +438,9 @@ class Storage_S3 implements Storage_Interface
 
                 }
             } catch (Exception $e) {
+                if ($msg) {
+                    $this->_out->logError($msg);
+                }
                 throw new Exception($e->getMessage(), $e->getCode());
             }
 

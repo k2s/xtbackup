@@ -353,42 +353,18 @@ class Storage_S3 implements Storage_Interface
         $job = $this->_out->jobStart("updating remote storage");
         $this->_out->jobSetProgressStep($job, 1000);
         foreach ($compare as $task) {
-            $msg = "";
-            try {
-                $path = $this->_getPathWithBasedir($task->path, self::ADD_BASE_DIR);
+            $repeat = 3;
+            do {
+                $msg = "";
+                try {
+                    $path = $this->_getPathWithBasedir($task->path, self::ADD_BASE_DIR);
 
-                switch ($task->action) {
-                    case Compare_Interface::CMD_MKDIR:
-                        $msg = "mkdir " . $path . " into s3 bucket";
-                        $this->_out->logDebug($msg);
-                        if (!$simulate) {
-                            // create folders
-                            $this->_s3->create_object(
-                                $this->getBucket(), $path,
-                                array(
-                                    'body' => '',
-                                    'storage' => $this->_defaultRedundancyStorage
-                                )
-                            );
-                        }
-                        break;
-                    case Compare_Interface::CMD_PUT:
-                        $msg = "put " . $path . " into s3 bucket";
-                        $this->_out->logDebug($msg);
-                        $uploadPath = $local->getBaseDir() . $task->path;
-
-                        //fix for windows encoding issue
-                        $uploadPath = $local->convertEncodingPath($uploadPath);
-
-                        if (!file_exists($uploadPath)) {
-                            $this->_out->logError("file $uploadPath does not exists anymore locally");
-                            continue;
-                        }
-                        if (!$simulate) {
-                            //empty directory
-                            if (ord(substr($path, -1)) === 47) {
-                                //for empty folders we need little different options
-                                $this->_out->logWarning("TODO putting empty folder $path ... is it possible ?");
+                    switch ($task->action) {
+                        case Compare_Interface::CMD_MKDIR:
+                            $msg = "mkdir " . $path . " into s3 bucket";
+                            $this->_out->logDebug($msg);
+                            if (!$simulate) {
+                                // create folders
                                 $this->_s3->create_object(
                                     $this->getBucket(), $path,
                                     array(
@@ -396,53 +372,86 @@ class Storage_S3 implements Storage_Interface
                                         'storage' => $this->_defaultRedundancyStorage
                                     )
                                 );
-                            } else {
-                                $options = array('fileUpload' => $uploadPath, 'storage' => $this->_defaultRedundancyStorage);
-                                // TODO it should be possible to speedup upload of small upload but using S3 batch
-                                if ($this->_options['multipart']['big-files']) {
-                                    // multipart upload for big files
-                                    if ($this->_options['multipart']['part-size']) {
-                                        $options['partSize'] = $this->_options['multipart']['part-size'];
-                                    }
-                                    $this->_s3->create_mpu_object($this->getBucket(), $path, $options);
+                            }
+                            break;
+                        case Compare_Interface::CMD_PUT:
+                            $msg = "put " . $path . " into s3 bucket";
+                            $this->_out->logDebug($msg);
+                            $uploadPath = $local->getBaseDir() . $task->path;
+
+                            //fix for windows encoding issue
+                            $uploadPath = $local->convertEncodingPath($uploadPath);
+
+                            if (!file_exists($uploadPath)) {
+                                $this->_out->logError("file $uploadPath does not exists anymore locally");
+                                continue;
+                            }
+                            if (!$simulate) {
+                                //empty directory
+                                if (ord(substr($path, -1)) === 47) {
+                                    //for empty folders we need little different options
+                                    $this->_out->logWarning("TODO putting empty folder $path ... is it possible ?");
+                                    $this->_s3->create_object(
+                                        $this->getBucket(), $path,
+                                        array(
+                                            'body' => '',
+                                            'storage' => $this->_defaultRedundancyStorage
+                                        )
+                                    );
                                 } else {
-                                    // normal upload
-                                    $this->_s3->create_object($this->getBucket(), $path, $options);
+                                    $options = array('fileUpload' => $uploadPath, 'storage' => $this->_defaultRedundancyStorage);
+                                    // TODO it should be possible to speedup upload of small upload but using S3 batch
+                                    if ($this->_options['multipart']['big-files']) {
+                                        // multipart upload for big files
+                                        if ($this->_options['multipart']['part-size']) {
+                                            $options['partSize'] = $this->_options['multipart']['part-size'];
+                                        }
+                                        $this->_s3->create_mpu_object($this->getBucket(), $path, $options);
+                                    } else {
+                                        // normal upload
+                                        $this->_s3->create_object($this->getBucket(), $path, $options);
+                                    }
                                 }
                             }
-                        }
-                        break;
-                    case Compare_Interface::CMD_DELETE:
-                        $msg = "deleting " . $path . " from s3 bucket";
-                        $this->_out->logDebug($msg);
-                        if (!$simulate) {
-                            $this->_s3->delete_object(
-                                $this->getBucket(), $path
-                            );
-                        }
-                        break;
-                    case Compare_Interface::CMD_TS:
-                        // storing this information as metadata is too slow to be used
-//                        $this->_out->logDebug("remember local timestamp for " . $path . " into s3 bucket");
-//                        if (!$simulate) {
-//                            $this->_s3->update_object(
-//                                $this->getBucket(), $path,
-//                                array(
-//                                     'meta' => array('localts' => $task->ltime),
-//                                )
-//                            );
-//                        }
-                        break;
-                    default:
-                        $this->_out->logError("ignored command {$task->action}");
+                            break;
+                        case Compare_Interface::CMD_DELETE:
+                            $msg = "deleting " . $path . " from s3 bucket";
+                            $this->_out->logDebug($msg);
+                            if (!$simulate) {
+                                $this->_s3->delete_object(
+                                    $this->getBucket(), $path
+                                );
+                            }
+                            break;
+                        case Compare_Interface::CMD_TS:
+                            // storing this information as metadata is too slow to be used
+    //                        $this->_out->logDebug("remember local timestamp for " . $path . " into s3 bucket");
+    //                        if (!$simulate) {
+    //                            $this->_s3->update_object(
+    //                                $this->getBucket(), $path,
+    //                                array(
+    //                                     'meta' => array('localts' => $task->ltime),
+    //                                )
+    //                            );
+    //                        }
+                            break;
+                        default:
+                            $this->_out->logError("ignored command {$task->action}");
 
+                    }
+                    $repeat = 0;
+                } catch (Exception $e) {
+                    $repeat--;
+                    if ($repeat) {
+                        $this->_out->logError("need to repeat: $msg");
+                    } else {
+                        if ($msg) {
+                            $this->_out->logError($msg);
+                        }
+                        throw new Exception($e->getMessage(), $e->getCode());
+                    }
                 }
-            } catch (Exception $e) {
-                if ($msg) {
-                    $this->_out->logError($msg);
-                }
-                throw new Exception($e->getMessage(), $e->getCode());
-            }
+            } while ($repeat);
 
             if (!$simulate) {
                 $compare->remoteHasDone($task);

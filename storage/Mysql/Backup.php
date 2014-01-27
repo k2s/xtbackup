@@ -245,7 +245,13 @@ TXT
     {
     }
 
-    protected function _helperBackupCodeObject($store, $kind, $cmd, $colName)
+    /**
+     * @param Storage_Mysql_IStore $store
+     * @param string $kind
+     * @param string $cmd
+     * @param int $colIndex
+     */
+    protected function _helperBackupCodeObject($store, $kind, $cmd, $colIndex)
     {
         foreach ($this->listAvailableObjectsToBackup($kind) as $def) {
             if (is_array($def)) {
@@ -253,7 +259,7 @@ TXT
                 $def = $def[0];
             }
             $this->_outObject($kind, $def);
-            $sql = $this->_db->query($cmd . " `{$this->_dbName}`.`$def`")->fetchColumn($colName);
+            $sql = $this->_db->query($cmd . " `{$this->_dbName}`.`$def`")->fetchColumn($colIndex);
             $security = $this->_removeSecurity($kind, $sql);
             // TODO store definer
             $store->storeDbObject($kind, $def, "-- $security\n$sql");
@@ -275,11 +281,17 @@ TXT
         $this->_helperBackupCodeObject($store, self::KIND_PROCEDURES, "SHOW CREATE PROCEDURE", 2);
     }
 
+    /**
+     * @param Storage_Mysql_IStore $store
+     */
     protected function _backupTriggers($store)
     {
         $this->_helperBackupCodeObject($store, self::KIND_TRIGGERS, "SHOW CREATE TRIGGER", 2);
     }
 
+    /**
+     * @param Storage_Mysql_IStore $store
+     */
     protected function _backupTables($store)
     {
         foreach ($this->listAvailableObjectsToBackup(self::KIND_TABLES) as $def) {
@@ -366,7 +378,7 @@ SQL;
      * @param string $sql
      * @return string
      */
-    protected function _removeSecurity($kind, &$sql)
+    protected function _removeSecurity(/** @noinspection PhpUnusedParameterInspection */ $kind, &$sql)
     {
         /*    switch ($kind) {
                 case self::KIND_FUNCTIONS:
@@ -403,7 +415,7 @@ SQL;
 
     protected function _backupData($store)
     {
-        // TODO detect if server is localhost
+        // TODO detect if server is localhost and if it is possible to use faster local backup command
         if (false) {
             $this->_backupDataFromLocal($store);
         } else {
@@ -411,20 +423,30 @@ SQL;
         }
     }
 
+    /**
+     * @param Storage_Mysql_IStore $store
+     */
     protected function _backupDataFromLocal($store)
     {
-        // TODO not implemented
-        /**
-         * SELECT * INTO OUTFILE "c:/mydata.csv"
-         * FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"'
-         * LINES TERMINATED BY "\n"
-         * FROM my_table;
-         */
         foreach ($this->listAvailableObjectsToBackup(self::KIND_DATA) as $def) {
             $this->_outObject(self::KIND_DATA, $def);
+            $fn = $store->storeFilenameFor(self::KIND_DATA, $def);
+
+            $sql = <<<SQL
+SELECT * INTO OUTFILE "$fn"
+  FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"'
+  LINES TERMINATED BY "\\n"
+  FROM `{$this->_dbName}`.`$def`;
+SQL;
+            $this->_db->query($sql);
+
+            // TODO compress if configured
         }
     }
 
+    /**
+     * @param Storage_Mysql_IStore $store
+     */
     protected function _backupDataFromRemote($store)
     {
         foreach ($this->listAvailableObjectsToBackup(self::KIND_DATA) as $def) {

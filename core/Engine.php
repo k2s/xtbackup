@@ -1,6 +1,9 @@
 <?php
+/** @noinspection PhpIncludeInspection */
 require_once "core/StopException.php";
+/** @noinspection PhpIncludeInspection */
 require_once "core/CfgPart.php";
+/** @noinspection PhpIncludeInspection */
 require_once "core/Lock.php";
 
 // may be used in INI
@@ -26,7 +29,7 @@ class Core_Engine
     /**
      * Output object, used to do logging and progress visualization tasks
      *
-     * @var Output_Stack
+     * @var Output_Interface
      */
     public static $out;
     /**
@@ -86,6 +89,11 @@ class Core_Engine
     protected $_stopAt = false;
 
     /**
+     * @var Core_Lock
+     */
+    protected $_lock;
+
+    /**
      * Constructor
      *
      * The $output object is used already before INI is loaded so it is important object to see errors in configuration.
@@ -101,7 +109,9 @@ class Core_Engine
         self::$_isWindows = (strpos(strtolower(php_uname('s')), 'win') !== false);
 
         // we need to have at least output class as soon as possible
+        /** @noinspection PhpIncludeInspection */
         require_once 'output/Interface.php';
+        /** @noinspection PhpIncludeInspection */
         require_once 'output/Stack.php';
         self::$out = new Output_Stack();
         if (false !== $output) {
@@ -110,10 +120,12 @@ class Core_Engine
                 self::$out->outputAdd($output);
             } else {
                 // add Output_Cli as default output for startup
+                /** @noinspection PhpIncludeInspection */
                 require_once 'output/Cli.php';
                 self::$out->outputAdd(new Output_Cli(array()));
             }
         } else {
+            /** @noinspection PhpIncludeInspection */
             require_once 'output/Cli.php';
             self::$out->outputAdd(new Output_Cli(array()));
         }
@@ -484,6 +496,7 @@ class Core_Engine
                 if (!@file_exists($path . '.php')) {
                     return false;
                 }
+                /** @noinspection PhpIncludeInspection */
                 require_once($path . '.php');
                 return true;
             }
@@ -578,11 +591,12 @@ class Core_Engine
             foreach (array('compare', 'filter', 'output', 'storage') as $sub) {
 //                echo $root . $sub . "\n";
                 foreach (new DirectoryIterator($root . $sub) as $info) {
+                    /** @var $info SplFileInfo */
                     if ($info->isFile()) {
+                        /** @noinspection PhpIncludeInspection */
                         require_once($info->getPathname());
                     }
                 }
-
             }
         }
 

@@ -17,5 +17,8 @@ interface Output_Interface
     function jobStep($job);
     function jobSetProgressStep($job, $step);
 
+    function mark();
+    function time();
+
     static function getConfigOptions($part=null);
 }

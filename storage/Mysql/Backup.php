@@ -1,4 +1,5 @@
 <?php
+
 class Storage_Mysql_Backup implements Storage_Mysql_IBackup
 {
     /**
@@ -88,8 +89,8 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
 
     function addRestoreScript($folder)
     {
-        $src = dirname(__FILE__).DIRECTORY_SEPARATOR.'cliRestore.php';
-        $trg = $folder.'restore.php';
+        $src = dirname(__FILE__) . DIRECTORY_SEPARATOR . 'cliRestore.php';
+        $trg = $folder . 'restore.php';
         copy($src, $trg);
     }
 
@@ -98,9 +99,9 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
         // filter objects which should be backed up
         if ($this->_filterExtDef) {
             // apply external filter
-            foreach ($this->_cachedObjectsToBackup as $kind=>&$objects) {
-                foreach ($objects as $k=>$v) {
-                    if (1!==$this->_filterExt($kind, $v)) {
+            foreach ($this->_cachedObjectsToBackup as $kind => &$objects) {
+                foreach ($objects as $k => $v) {
+                    if (1 !== $this->_filterExt($kind, $v)) {
                         $this->_out->logNotice("$kind: skip '$v' because of external filter");
                         unset($objects[$k]);
                         continue;
@@ -110,13 +111,18 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
         }
     }
 
-    function listAvailableObjectsToBackup($kind=false)
+    protected function _outObject($kind, $name)
+    {
+        $this->_out->logNotice("backup '$kind' ... '$name'");
+    }
+
+    function listAvailableObjectsToBackup($kind = false)
     {
         /*if ($kind==self::KIND_TABLES || $kind==self::KIND_DATA) {
             return array('video');
         }*/
 
-        if ($kind===false) {
+        if ($kind === false) {
             // build list object of all kinds
 
             $res = array();
@@ -129,7 +135,7 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
 
         // build list of object names of given kind
         if (!isset($this->_cachedObjectsToBackup[$kind])) {
-            $funcName = "_cache".ucfirst($kind);
+            $funcName = "_cache" . ucfirst($kind);
             if (method_exists($this, $funcName)) {
                 $this->$funcName();
             } else {
@@ -142,7 +148,7 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
         return $this->_cachedObjectsToBackup[$kind];
     }
 
-    protected function _filterExt($action, $objName, $cmd=null)
+    protected function _filterExt($action, $objName, $cmd = null)
     {
         if (is_null($cmd)) {
             $cmd = $this->_filterExtDef;
@@ -151,11 +157,11 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
             return 1;
         }
 
-        $cmd .= $this->_dbName." $action $objName";
+        $cmd .= $this->_dbName . " $action $objName";
         $output = $ret = null;
         exec($cmd, $output, $ret);
         if ($output) {
-            $this->_out->logError("Error output from external filter:".PHP_EOL.implode(PHP_EOL, $output));
+            $this->_out->logError("Error output from external filter:" . PHP_EOL . implode(PHP_EOL, $output));
         }
 
         return $ret;
@@ -179,7 +185,7 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
     function doBackup($store)
     {
         foreach ($this->_kindsToBackup as $kind) {
-            $funcName = "_backup".ucfirst($kind);
+            $funcName = "_backup" . ucfirst($kind);
             if (method_exists($this, $funcName)) {
                 $this->$funcName($store);
             } else {
@@ -195,7 +201,7 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
     protected function _backupEnd($store)
     {
         $def = $this->_db->query("SELECT UTC_TIMESTAMP()")->fetchColumn(0);
-        $def = strtotime($def."UTC");
+        $def = strtotime($def . "UTC");
         $def = date("c", $def);
         $phpTime = date("c");
         $store->storeDbObject(self::KIND_DB, "_timeend", <<<TXT
@@ -216,11 +222,11 @@ TXT
         $this->_out->logNotice("script database ... '{$this->_dbName}'");
         // script DB creation
         $def = $this->_db->query("show create DATABASE `{$this->_dbName}`;")->fetchColumn(1);
-        $def = substr($def, 0, 16).'IF NOT EXISTS '.substr($def, 16);
+        $def = substr($def, 0, 16) . 'IF NOT EXISTS ' . substr($def, 16);
         $store->storeDbObject(self::KIND_DB, "_name", $this->_dbName);
         $store->storeDbObject(self::KIND_DB, "_create", $def);
         $def = $this->_db->query("SELECT UTC_TIMESTAMP()")->fetchColumn(0);
-        $def = strtotime($def."UTC");
+        $def = strtotime($def . "UTC");
         $def = date("c", $def);
         $phpTime = date("c");
         $store->storeDbObject(self::KIND_DB, "_timestart", <<<TXT
@@ -230,8 +236,14 @@ TXT
         );
 
     }
-    protected function _backupRefs($store) {}
-    protected function _backupIndexes($store) {}
+
+    protected function _backupRefs($store)
+    {
+    }
+
+    protected function _backupIndexes($store)
+    {
+    }
 
     protected function _helperBackupCodeObject($store, $kind, $cmd, $colName)
     {
@@ -240,8 +252,8 @@ TXT
                 // we store multiple informations about triggers
                 $def = $def[0];
             }
-            $this->_out->logNotice("backup '$kind' ... '$def'");
-            $sql = $this->_db->query($cmd." `{$this->_dbName}`.`$def`")->fetchColumn($colName);
+            $this->_outObject($kind, $def);
+            $sql = $this->_db->query($cmd . " `{$this->_dbName}`.`$def`")->fetchColumn($colName);
             $security = $this->_removeSecurity($kind, $sql);
             // TODO store definer
             $store->storeDbObject($kind, $def, "-- $security\n$sql");
@@ -272,6 +284,7 @@ TXT
     {
         foreach ($this->listAvailableObjectsToBackup(self::KIND_TABLES) as $def) {
             // info SHOW TABLE STATUS LIKE 'TABLES';
+            $this->_outObject(self::KIND_TABLES, $def);
 
             // collect some needed data
             $sql = <<<SQL
@@ -291,29 +304,29 @@ SQL;
                 foreach ($s as $t) {
                     $t = trim($t);
                     if (
-                        0==strncasecmp($t, "CONSTRAINT ", 11)
+                        0 == strncasecmp($t, "CONSTRAINT ", 11)
                     ) {
                         // constraint found
-                        $refs[] = "ADD ".$t;
+                        $refs[] = "ADD " . $t;
                     } else if (
-                        0==strncasecmp($t, "KEY ", 4) ||
-                        0==strncasecmp($t, "UNIQUE KEY ", 11) ||
-                        0==strncasecmp($t, "PRIMARY KEY ", 12)
+                        0 == strncasecmp($t, "KEY ", 4) ||
+                        0 == strncasecmp($t, "UNIQUE KEY ", 11) ||
+                        0 == strncasecmp($t, "PRIMARY KEY ", 12)
                     ) {
                         // index found
-                        $idx[] = "ADD ".$t;
-                    } elseif ($t[0]==")") {
+                        $idx[] = "ADD " . $t;
+                    } elseif ($t[0] == ")") {
                         // end of column definition
                         $last = rtrim($last, ",");
                         unset($last);
-                        $tbl[] = &$t;
+                        $tbl[] = & $t;
                     } else {
                         // table definition
-                        if ($autoIncrementField && 0===strncasecmp("`$autoIncrementField`", $t, 2+strlen($autoIncrementField))) {
+                        if ($autoIncrementField && 0 === strncasecmp("`$autoIncrementField`", $t, 2 + strlen($autoIncrementField))) {
                             // autoincrement field
 
                             // add to indexes
-                            $idx[] = "MODIFY ".rtrim($t, ',').',';
+                            $idx[] = "MODIFY " . rtrim($t, ',') . ',';
 
                             // remove definition
                             // TODO safe would be to make sure, that it is not part of field name or COMMENT
@@ -321,28 +334,28 @@ SQL;
                         }
                         unset($last);
                         $last = $t;
-                        $tbl[] = &$last;
+                        $tbl[] = & $last;
                     }
                 }
 
                 // store the table
                 $tbl = implode(PHP_EOL, $tbl);
 
-                $store->storeDbObject(self::KIND_TABLES, $def, $tbl.';');
+                $store->storeDbObject(self::KIND_TABLES, $def, $tbl . ';');
 
                 // store tables indexes
                 if (count($idx)) {
                     array_unshift($idx, "ALTER TABLE `$def`");
-                    $idx[count($idx)-1] = rtrim($idx[count($idx)-1], ',');
+                    $idx[count($idx) - 1] = rtrim($idx[count($idx) - 1], ',');
                     $idx = implode(PHP_EOL, $idx);
-                    $store->storeDbObject(self::KIND_INDEXES, $def, $idx.';');
+                    $store->storeDbObject(self::KIND_INDEXES, $def, $idx . ';');
                 }
 
                 // store table constraints
                 if (count($refs)) {
                     array_unshift($refs, "ALTER TABLE `$def`");
                     $refs = implode(PHP_EOL, $refs);
-                    $store->storeDbObject(self::KIND_REFS, $def, $refs.';');
+                    $store->storeDbObject(self::KIND_REFS, $def, $refs . ';');
                 }
             }
         }
@@ -355,29 +368,29 @@ SQL;
      */
     protected function _removeSecurity($kind, &$sql)
     {
-    /*    switch ($kind) {
-            case self::KIND_FUNCTIONS:
-                $keyword = " FUNCTION ";
-                break;
-            case self::KIND_VIEWS:
-                $keyword = " VIEW ";
-                break;
-            default:
-                die("don't know how to extract security from object kind '$kind'\n");
-        }*/
+        /*    switch ($kind) {
+                case self::KIND_FUNCTIONS:
+                    $keyword = " FUNCTION ";
+                    break;
+                case self::KIND_VIEWS:
+                    $keyword = " VIEW ";
+                    break;
+                default:
+                    die("don't know how to extract security from object kind '$kind'\n");
+            }*/
 
         // extract security definition
         $security = "";
         $a = explode("\n", $sql);
         $b = array();
-        $l=0;
+        $l = 0;
         // this loop is here, because it may be good to extract also SQL SECURITY INVOKER attribute
         foreach ($a as $s) {
-            if (++$l==1) {
+            if (++$l == 1) {
                 // search for DEFINER
-                if (preg_match("/DEFINER=`([^`]+)`@`([^`]+)`/i", $s, $m, PREG_OFFSET_CAPTURE)>0) {
+                if (preg_match("/DEFINER=`([^`]+)`@`([^`]+)`/i", $s, $m, PREG_OFFSET_CAPTURE) > 0) {
                     $security = $m[0][0];
-                    $s = substr($s, 0, $m[0][1]-1).substr($s, $m[0][1]+strlen($m[0][0]));
+                    $s = substr($s, 0, $m[0][1] - 1) . substr($s, $m[0][1] + strlen($m[0][0]));
                 }
             }
             $b[] = $s;
@@ -402,24 +415,25 @@ SQL;
     {
         // TODO not implemented
         /**
-         SELECT * INTO OUTFILE "c:/mydata.csv"
-FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"'
-LINES TERMINATED BY "\n"
-FROM my_table;
+         * SELECT * INTO OUTFILE "c:/mydata.csv"
+         * FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"'
+         * LINES TERMINATED BY "\n"
+         * FROM my_table;
          */
         foreach ($this->listAvailableObjectsToBackup(self::KIND_DATA) as $def) {
-
+            $this->_outObject(self::KIND_DATA, $def);
         }
     }
 
     protected function _backupDataFromRemote($store)
     {
         foreach ($this->listAvailableObjectsToBackup(self::KIND_DATA) as $def) {
+            $this->_outObject(self::KIND_DATA, $def);
             $fn = $store->storeFilenameFor(self::KIND_DATA, $def);
             if ($this->_compressDataFiles) {
-                $f = fopen("compress.zlib://".$fn.".z", "w");
+                $f = fopen("compress.zlib://" . $fn . ".z", "w");
             } else {
-                    $f = fopen($fn, "w");
+                $f = fopen($fn, "w");
             }
             // TODO handle error opening file
             $this->_tableDataToCsv($def, $f);
@@ -432,43 +446,45 @@ FROM my_table;
         // TODO it may be better if Storage_Mysql whould hangle storing of array data
         $q = $this->_db->query("SELECT * FROM `{$this->_dbName}`.`$tableName`");
         //$q = $this->_db->query("SELECT * FROM `a`.`a_export`");
-        while (false!==($data=$q->fetch(PDO::FETCH_NUM))) {
+        while (false !== ($data = $q->fetch(PDO::FETCH_NUM))) {
             // we have to convert null fields to \N
             foreach ($data as &$c) {
                 if (is_null($c)) {
                     $c = "\N";
                 } else {
                     $c = strtr($c, array(
-                                     "\\" => "\\\\",
-                                     "\t" => "\\\t",
-                                     "\n" => "\\\n",
-                                     "\r" => "\\\r",
-                              ));
+                        "\\" => "\\\\",
+                        "\t" => "\\\t",
+                        "\n" => "\\\n",
+                        "\r" => "\\\r",
+                    ));
                 }
             }
 
             // store data in tab delimited format
             //fputcsv($f, $data, "\t", ' ');
-            fwrite($f, implode("\t", $data).chr(13).chr(10));
+            fwrite($f, implode("\t", $data) . chr(13) . chr(10));
         }
     }
 
 }
-/**
- * Create export file: SELECT * INTO OUTFILE '/tmp/a_export' FROM a_export
- *
- * Load data:
-*/
-/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
-/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!40101 SET NAMES utf8 */;
-/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
-/*!40103 SET TIME_ZONE='+00:00' */;
-/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
-/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
-/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
-/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
-/*TRUNCATE TABLE cms_page;
-LOAD DATA LOCAL INFILE '/home/k2s/Backups/xtbackupMysql/data/cms_page' INTO TABLE cms_page CHARACTER SET UTF8;
-select count(*) from cms_page;*/
+
+///**
+// * Create export file: SELECT * INTO OUTFILE '/tmp/a_export' FROM a_export
+// *
+// * Load data:
+// */
+// /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+// /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+// /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+// /*!40101 SET NAMES utf8 */;
+// /*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+// /*!40103 SET TIME_ZONE='+00:00' */;
+// /*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+// /*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+// /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+// /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+// /*TRUNCATE TABLE cms_page;
+// LOAD DATA LOCAL INFILE '/home/k2s/Backups/xtbackupMysql/data/cms_page' INTO TABLE cms_page CHARACTER SET UTF8;
+// select count(*) from cms_page;
+//*/

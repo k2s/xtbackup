@@ -93,8 +93,7 @@ class Core_Lock
                 $this->_output->logDebug(">>>LOCK: lock type - also compare ini md5");
                 //so we need to check current and saved md5
                 $this->_output->logDebug($this->_iniMd5);
-                var_dump($this->_savedMd5);
-                
+
                 if (empty($this->_savedMd5)|| (!empty($this->_savedMd5) && in_array($this->_iniMd5, $this->_savedMd5))) {
                     ftruncate($this->_file, 0);
                     $this->_savedMd5[] = $this->_iniMd5;

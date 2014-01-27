@@ -16,12 +16,16 @@ class Core_Lock
     protected $_lockType = self::TYPE_TMP_DIR_MD5;
     protected $_lockWait = 0;
 
+    /**
+     * @var Output_Interface
+     */
     protected $_output;
 
     protected $_iniOptions;
     protected $_cmdOptions;
 
     protected $_iniMd5;
+    protected $_tmpDir;
 
     protected $_savedMd5 = array();
 
@@ -32,6 +36,10 @@ class Core_Lock
      */
     protected $_file;
 
+    /**
+     * @param array $iniOptions
+     * @param Output_Interface $output
+     */
     public function __construct($iniOptions, $output)
     {
         $this->_iniOptions = $iniOptions;
@@ -121,6 +129,8 @@ class Core_Lock
         ftruncate($this->_file, 0);
         fclose($this->_file);
         $this->_output->logDebug(">>>File unlocked");
+
+        return true;
     }
 
     public function wait()

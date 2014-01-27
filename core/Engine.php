@@ -4,12 +4,12 @@ require_once "core/CfgPart.php";
 require_once "core/Lock.php";
 
 // may be used in INI
-!defined('ENGINE_DIR') && define("ENGINE_DIR", realpath(__DIR__ . '/../') . '/');
+!defined('ENGINE_DIR') && define("ENGINE_DIR", realpath(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR);
 
 class Core_Engine
 {
     /**
-     * Major and minor version should be set here. 
+     * Major and minor version should be set here.
      * If revision number is question mark getVersion() will try to determine it from git.
      */
     const VERSION = "0.1.?";
@@ -104,7 +104,7 @@ class Core_Engine
         require_once 'output/Interface.php';
         require_once 'output/Stack.php';
         self::$out = new Output_Stack();
-        if (false!==$output) {
+        if (false !== $output) {
             if (!is_null($output)) {
                 // output was passed
                 self::$out->outputAdd($output);
@@ -139,14 +139,14 @@ class Core_Engine
         // initialize class autoloading
         $this->_initAutoload();
 
-        if (false===$output) {
+        if (false === $output) {
             self::$out->outputRemove(0);
         }
     }
 
     public function finish()
     {
-        self::$out->logNotice("peak of memory usage: ".memory_get_peak_usage(true));
+        self::$out->logNotice("peak of memory usage: " . memory_get_peak_usage(true));
         self::$out->finish($this->_stopAt);
         if (false === $this->_stopAt) {
             return Core_StopException::RETCODE_OK;
@@ -187,10 +187,10 @@ class Core_Engine
         foreach ($params as $key => $val) {
             $a = explode(".", $key);
             $param = array();
-            $b = &$param;
+            $b = & $param;
             foreach ($a as $k) {
                 $b[$k] = array();
-                $b = &$b[$k];
+                $b = & $b[$k];
             }
             $b = $val;
 
@@ -225,7 +225,7 @@ class Core_Engine
         $params = array();
         for ($i = 1; $i < count($cmd); $i++) {
             $s = trim($cmd[$i]);
-            if ($s[0]!='-') {
+            if ($s[0] != '-') {
                 // parameters which can't be passed in INI are excluded
                 $params[] = $cmd[$i];
             }
@@ -276,11 +276,11 @@ class Core_Engine
             $options = array();
         }
         // merge defaults
-        foreach ($defaults as $key=>$val) {
+        foreach ($defaults as $key => $val) {
             if (array_key_exists($key, $options)) {
                 if (is_array($val)) {
                     if (!isset($hints[$key], $hints[$key][CfgPart::HINT_TYPE])) {
-                        self::array_merge_defaults($options[$key], $defaults[$key], isset($hints[$key]) ? $hints[$key]:null);
+                        self::array_merge_defaults($options[$key], $defaults[$key], isset($hints[$key]) ? $hints[$key] : null);
                     }
                 }
             } else {
@@ -290,7 +290,7 @@ class Core_Engine
 
         // apply hints
         if ($hints) {
-            foreach ($hints as $key=>$hint) {
+            foreach ($hints as $key => $hint) {
                 if (array_key_exists($key, $options)) {
                     if (isset($hint[CfgPart::HINT_TYPE])) {
                         switch ($hint[CfgPart::HINT_TYPE]) {
@@ -307,8 +307,8 @@ class Core_Engine
     public static function tildeToHome(&$o)
     {
         $s = substr($o, 0, 2);
-        if ($s=="~/" || $s=="~\\") {
-            $o = getenv("HOME").substr($o, 1);
+        if ($s == "~/" || $s == "~\\") {
+            $o = getenv("HOME") . substr($o, 1);
         }
     }
 
@@ -330,8 +330,8 @@ class Core_Engine
             }
             foreach ($this->_options['engine']['outputs'] as $keyName) {
                 $params = array_key_exists('output', $this->_options) && array_key_exists($keyName, $this->_options['output'])
-                        ? $this->_options['output'][$keyName]
-                        : array();
+                    ? $this->_options['output'][$keyName]
+                    : array();
                 $class = array_key_exists('class', $params) ? $params['class'] : $keyName;
                 // TODO pass $keyName to constructor
                 $class = "Output_" . ucfirst($class);
@@ -423,7 +423,7 @@ class Core_Engine
             if (!isset($this->_options['engine'])) {
                 throw new Core_StopException("You have to configure `engine`.", "init");
             }
-            
+
             //internally return isLocked();
             if ($this->_lock->lock()) {
                 self::$out->logNotice(">>>>SHOULD WAIT");
@@ -434,8 +434,8 @@ class Core_Engine
             $this->_configureOutput();
 
             // engine.nice
-            if (!self::isWindows() && false!==$this->_options['engine']['nice']) {
-                self::$out->logNotice("changing process priority, nice=".$this->_options['engine']['nice']);
+            if (!self::isWindows() && false !== $this->_options['engine']['nice']) {
+                self::$out->logNotice("changing process priority, nice=" . $this->_options['engine']['nice']);
                 proc_nice($this->_options['engine']['nice']);
             }
 
@@ -478,10 +478,10 @@ class Core_Engine
     {
         self::$out->logDebug("initializing class autoloading");
         spl_autoload_register(
-            function($className) {
+            function ($className) {
                 $path = str_replace("_", "/", $className);
                 $path[0] = strtolower($path[0]);
-                if(!@file_exists($path . '.php') ) {
+                if (!@file_exists($path . '.php')) {
                     return false;
                 }
                 require_once($path . '.php');
@@ -515,8 +515,7 @@ class Core_Engine
     {
         self::$out->logNotice("phase start: $phase");
         self::$out->mark();
-        foreach ($order as $role => $driver)
-        {
+        foreach ($order as $role => $driver) {
             if (method_exists($driver, $phase)) {
                 $driver->$phase($role, $this->_roles);
             }
@@ -571,8 +570,23 @@ class Core_Engine
             'output' => array(),
         );
 
+        // load all files with potentional driver classes
+        foreach (array_merge(array(ENGINE_DIR), $this->_options['engine']['extensions']) as $root) {
+            if (substr($root, -1) !== DIRECTORY_SEPARATOR) {
+                $root .= DIRECTORY_SEPARATOR;
+            }
+            foreach (array('compare', 'filter', 'output', 'storage') as $sub) {
+//                echo $root . $sub . "\n";
+                foreach (new DirectoryIterator($root . $sub) as $info) {
+                    if ($info->isFile()) {
+                        require_once($info->getPathname());
+                    }
+                }
+
+            }
+        }
+
         // request getConfigOptions on all drivers
-        // TODO use reflection of files in folders because the classes do not have to be loaded into memory already
         foreach (get_declared_classes() as $className) {
             $implements = array_intersect(
                 class_implements($className),
@@ -592,23 +606,23 @@ class Core_Engine
                 // build the full config key
                 $classCfg = array();
                 $key = $class;
-                if ($type!=="engine") {
+                if ($type !== "engine") {
                     // only engine does not have prefix
                     $classCfg[] = $type;
                     $key = strtolower($key);
-                    if (strpos($key, $type."_")===0) {
-                        $key =  substr($key, strlen($type)+1);
+                    if (strpos($key, $type . "_") === 0) {
+                        $key = substr($key, strlen($type) + 1);
                     }
                     // we want to show that class does not need to be the key
-                    $key = "my".$key;
+                    $key = "my" . $key;
                     //array_unshift($options, array("class"=>array_merge($classDefinition, array('value'=>$class))));
-                    $options = array("class"=>$classDefinition + array('value'=>$class)) + $options;
+                    $options = array("class" => $classDefinition + array('value' => $class)) + $options;
                 }
                 $classCfg[] = $key;
 
                 // handle options
-                foreach ($options as $option=>$d) {
-                    if (isset($d[CfgPart::HINT_TYPE]) && $d[CfgPart::HINT_TYPE]==CfgPart::TYPE_ARRAY) {
+                foreach ($options as $option => $d) {
+                    if (isset($d[CfgPart::HINT_TYPE]) && $d[CfgPart::HINT_TYPE] == CfgPart::TYPE_ARRAY) {
                         $option .= "[]";
                     }
                     $cfg = implode(".", array_merge($classCfg, array($option)));
@@ -618,7 +632,7 @@ class Core_Engine
                         $ini[$type][] = "; REQUIRED";
                     }
                     if ($d[CfgPart::DESCRIPTIONS]) {
-                        $ini[$type][] = "; ".str_replace("\n", "\n; ", $d[CfgPart::DESCRIPTIONS]);
+                        $ini[$type][] = "; " . str_replace("\n", "\n; ", $d[CfgPart::DESCRIPTIONS]);
                         $ini[$type][] = ";";
                     }
                     if (array_key_exists(CfgPart::DEFAULTS, $d)) {
@@ -672,11 +686,11 @@ class Core_Engine
             'compare' => 'definition of compare driver(s)'
         );
         $res = array();
-        $res[] = "; xtbackup.php configuration file for version ".self::getVersion();
+        $res[] = "; xtbackup.php configuration file for version " . self::getVersion();
         $res[] = "";
-        foreach ($priority as $section=>$description) {
+        foreach ($priority as $section => $description) {
             if (isset($ini[$section])) {
-                $res[] = ";".str_repeat("*", strlen($description)+2);
+                $res[] = ";" . str_repeat("*", strlen($description) + 2);
                 $res[] = "; $description";
                 $res[] = "";
                 $res[] = implode(PHP_EOL, $ini[$section]);
@@ -689,7 +703,7 @@ class Core_Engine
     protected function _renderKeyVal($cfg, $val, $def)
     {
         $type = isset($def['type']) ? $def['type'] : CfgPart::TYPE_UNKNOWN;
-        if (CfgPart::TYPE_BOOL===$type) {
+        if (CfgPart::TYPE_BOOL === $type) {
             if (!is_string($val)) {
                 $val = $val ? "true" : "false";
             }
@@ -697,7 +711,7 @@ class Core_Engine
 
         $ret = array();
         if (is_array($val)) {
-            if (count($val)>0) {
+            if (count($val) > 0) {
                 /** @noinspection PhpWrongForeachArgumentTypeInspection */
                 foreach ($val as $v) {
                     $ret[] = "$cfg = $v";
@@ -726,18 +740,18 @@ class Core_Engine
 
         // build full list of options
         $keys = array_keys($options[CfgPart::DEFAULTS])
-                + array_keys($options[CfgPart::HINTS])
-                + array_keys($options[CfgPart::DESCRIPTIONS])
-                + array_keys($options[CfgPart::REQUIRED])
-                + array_keys($options[CfgPart::SUGGESTED]);
+            + array_keys($options[CfgPart::HINTS])
+            + array_keys($options[CfgPart::DESCRIPTIONS])
+            + array_keys($options[CfgPart::REQUIRED])
+            + array_keys($options[CfgPart::SUGGESTED]);
 
         // define each parameter
         $params = array();
         foreach ($keys as $key) {
             $params[$key] = array(
-                CfgPart::DESCRIPTIONS=>isset($options[CfgPart::DESCRIPTIONS][$key]) ? $options[CfgPart::DESCRIPTIONS][$key] : null,
-                CfgPart::REQUIRED=>isset($options[CfgPart::REQUIRED][$key]) ? $options[CfgPart::REQUIRED][$key] : false,
-                CfgPart::SUGGESTED=>isset($options[CfgPart::SUGGESTED][$key]) ? $options[CfgPart::SUGGESTED][$key] : false,
+                CfgPart::DESCRIPTIONS => isset($options[CfgPart::DESCRIPTIONS][$key]) ? $options[CfgPart::DESCRIPTIONS][$key] : null,
+                CfgPart::REQUIRED => isset($options[CfgPart::REQUIRED][$key]) ? $options[CfgPart::REQUIRED][$key] : false,
+                CfgPart::SUGGESTED => isset($options[CfgPart::SUGGESTED][$key]) ? $options[CfgPart::SUGGESTED][$key] : false,
             );
             // we have to left out default if it is not defined, to be able to detect that there is no default
             if (array_key_exists($key, $options[CfgPart::DEFAULTS])) {
@@ -745,7 +759,7 @@ class Core_Engine
             }
             // add hints
             if (array_key_exists($key, $options[CfgPart::HINTS])) {
-                foreach ($options[CfgPart::HINTS][$key] as $hint=>$def) {
+                foreach ($options[CfgPart::HINTS][$key] as $hint => $def) {
                     $params[$key][$hint] = $def;
                 }
             }
@@ -762,9 +776,9 @@ class Core_Engine
      */
     static public function getVersion()
     {
-        if (false===self::$_version) {
+        if (false === self::$_version) {
             $version = self::VERSION;
-            if ("?"==substr($version, -1)) {
+            if ("?" == substr($version, -1)) {
                 // try to determine revision number from git
                 self::$_version = substr($version, 0, -1) . self::getRevisionFromGit(ENGINE_DIR);
             }
@@ -797,9 +811,9 @@ class Core_Engine
     {
         $opt = array(
             CfgPart::VERSION => self::getVersion(),
-            CfgPart::HINTS =>array(
-                'extensions' => array(CfgPart::HINT_TYPE=>CfgPart::TYPE_ARRAY),
-                'outputs' => array(CfgPart::HINT_TYPE=>CfgPart::TYPE_ARRAY),
+            CfgPart::HINTS => array(
+                'extensions' => array(CfgPart::HINT_TYPE => CfgPart::TYPE_ARRAY),
+                'outputs' => array(CfgPart::HINT_TYPE => CfgPart::TYPE_ARRAY),
             ),
             CfgPart::DEFAULTS => array(
                 'extensions' => array(),
@@ -813,25 +827,25 @@ You may configure multiple output configurations to be used by engine.
 
 Example: engine.outputs[] = mycli
 TXT
-                ,
+            ,
                 'compare' => <<<TXT
 Reference compare configuration key which will be used to evaluate what files have to be backuped.
 TXT
-                ,
+            ,
                 'remote' => <<<TXT
 Reference storage configuration key which will be used as remote storage.
 Local storage will be backuped to remote storage.
 
 Example: engine.remote = mys3
 TXT
-                ,
+            ,
                 'local' => <<<TXT
 Reference storage configuration key which will be used as local storage.
 Local storage will be backuped to remote storage.
 
 Example: engine.local = myfilesystem
 TXT
-                ,
+            ,
                 'extensions' => <<<TXT
 Register directories with additional drivers.
 Structure of such directory has to follow xtbackup folder hierarchy.
@@ -841,14 +855,14 @@ Example:
 engine.extensions[] = ENGINE_DIR "/examples/plugins"
 TXT
             ,
-            'nice' => <<<TXT
+                'nice' => <<<TXT
 Set process priority. Doesn't work on Windows.
 See PHP/proc_nice and `man nice` for more info.
 TXT
 
             ),
-            CfgPart::REQUIRED => array('local'=>true, 'remote'=>true, 'compare'=>true),
-            CfgPart::SUGGESTED =>array('outputs'=>true),
+            CfgPart::REQUIRED => array('local' => true, 'remote' => true, 'compare' => true),
+            CfgPart::SUGGESTED => array('outputs' => true),
         );
 
         if (is_null($part)) {

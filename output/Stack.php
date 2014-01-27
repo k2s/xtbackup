@@ -44,7 +44,7 @@ class Output_Stack
         if (is_null($key)) {
             $this->_stack = array();
         } else {
-            die("not implemented in outputRemove");
+            unset($this->_stack[$key]);
         }
     }
 

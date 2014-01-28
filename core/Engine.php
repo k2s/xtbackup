@@ -833,6 +833,8 @@ class Core_Engine
                 'extensions' => array(),
                 'outputs' => array('cli'),
                 'nice' => false,
+                'lock-type' => 2,
+                'lock-wait' => 0,
             ),
             CfgPart::DESCRIPTIONS => array(
                 'outputs' => <<<TXT
@@ -873,7 +875,23 @@ TXT
 Set process priority. Doesn't work on Windows.
 See PHP/proc_nice and `man nice` for more info.
 TXT
+            ,
+                'lock-type' => <<<TXT
+Limit backup instances to run only once instance globaly (value 1) or per configuration file (value 2).
 
+Example:
+engine.lock-type = 1
+TXT
+            ,
+                'lock-wait' => <<<TXT
+What should additional instances (see lock-type) do:
+0 - application wait until previous backup ends
+greater then 0 - how many seconds should current process wait for previous backup to end, then exit application
+false - don't wait, exit application
+
+Example:
+engine.lock-wait = 0
+TXT
             ),
             CfgPart::REQUIRED => array('local' => true, 'remote' => true, 'compare' => true),
             CfgPart::SUGGESTED => array('outputs' => true),

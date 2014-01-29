@@ -130,7 +130,7 @@ class Storage_S3 implements Storage_Interface
         // find out if versioning is enabled
         $versioning = $this->_s3->get_versioning_status($this->getBucket());
         if (!$versioning->isOK()) {
-            throw new Core_StopException("Not possible to get versioning status of S3 bucket.", "S3Init");
+            throw new Core_StopException("Not possible to get versioning status of S3 bucket. (" . (string)$versioning->body->Code . ": " . (string)$versioning->body->Message . ")", "S3Init");
         }
         $this->_versioningEnabled = $versioning->body->Status == "Enabled";
         if (!$this->_versioningEnabled) {
@@ -425,15 +425,15 @@ class Storage_S3 implements Storage_Interface
                             break;
                         case Compare_Interface::CMD_TS:
                             // storing this information as metadata is too slow to be used
-    //                        $this->_out->logDebug("remember local timestamp for " . $path . " into s3 bucket");
-    //                        if (!$simulate) {
-    //                            $this->_s3->update_object(
-    //                                $this->getBucket(), $path,
-    //                                array(
-    //                                     'meta' => array('localts' => $task->ltime),
-    //                                )
-    //                            );
-    //                        }
+                            //                        $this->_out->logDebug("remember local timestamp for " . $path . " into s3 bucket");
+                            //                        if (!$simulate) {
+                            //                            $this->_s3->update_object(
+                            //                                $this->getBucket(), $path,
+                            //                                array(
+                            //                                     'meta' => array('localts' => $task->ltime),
+                            //                                )
+                            //                            );
+                            //                        }
                             break;
                         default:
                             $this->_out->logError("ignored command {$task->action}");

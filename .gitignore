@@ -1,0 +1,6 @@
+_site/
+Gemfile
+Gemfile.lock
+
+.idea
+*.iml

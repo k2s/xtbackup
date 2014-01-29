@@ -1,0 +1,24 @@
+---
+layout: post
+title:  "3. Files to Amazon S3"
+date:   2014-01-28 09:00:03
+categories: tutorial files s3
+---
+
+[Basic]({% post_url 2014-01-28-basic %})
+
+Let us start with simple example where we mirror `local` directory to `remote` directory.
+
+This configuration will backup/mirror our pictures from user home folder `~/Pictures` (use something like `c:\Users\me\Pictures on Windows`)
+to other local folder (for example mounted NAS in `/mnt/nas`).
+
+{% highlight ini linenos %}
+storage.filesystem.basedir=~/Pictures
+storage.s3.
+compare.sqlite.file=~/xtbackup.db
+
+; engine.outputs[]=cli
+engine.local=filesystem
+engine.remote=s3
+engine.compare=sqlite
+{% endhighlight %}

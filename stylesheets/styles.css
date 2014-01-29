@@ -849,3 +849,33 @@ section #title .credits.right {
     display: none;
   }
 }
+
+/*k2s*/
+#header {
+    width: 100%;
+}
+
+#header nav {
+    background: none;
+    float: right;
+}
+
+#header h1 {
+    margin: 0;
+}
+
+#header nav li a {
+    padding: 10px 6px;
+}
+
+.wrapper {
+    /*margin: 0 auto;*/
+    /*position: relative;*/
+    padding-top: 80px;
+}
+
+#header .wrapper {
+    padding-top: 0;
+}
+
+.highlight .c1 { color: #595959; font-style: italic } /* Comment.Single */

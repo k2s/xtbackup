@@ -1,0 +1,6 @@
+---
+layout: post
+date:   2014-01-28 09:00:05
+title:  "5. Backup MySQL DB to Amazon S3"
+categories: "tutorial mysql s3"
+---

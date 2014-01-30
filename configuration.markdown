@@ -32,6 +32,8 @@ The purpose of multiple `ini[]` options and precedence of command line options o
 * sharing of configuration
 * security, credentials may be stored in private INI files
 
+### Next
+
 It is recommended to read through the tutorials to learn about xtBackup usage:
 
 {% include post_list.html %}

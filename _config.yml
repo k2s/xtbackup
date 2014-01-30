@@ -3,3 +3,6 @@ markdown: redcarpet
 pygments: true
 permalink: none
 baseurl:     /xtbackup
+safe: true
+lsi: false
+exclude: ['Gemfile', 'Gemfile.lock', 'debug.sh', 'xtbackup-pages.iml', 'params.json']

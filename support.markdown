@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Support
+title: xtBackup Support
 ---
 Support
 -------

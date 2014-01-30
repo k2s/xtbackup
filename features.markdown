@@ -1,11 +1,11 @@
 ---
 layout: default
-title: xtbackup Site
+title: xtBackup Features
 ---
 Features
 --------
 
-* ready to be used as command line tool (provided by xtbackup.php tool)
+* ready to be used as command line tool (provided by `xtbackup.php` tool)
 * no installation needed, works everywhere where PHP 5.3 and above is installed
   * [DreamHost](http://www.dreamhost.com/) tested
 * designed as re-usable PHP code library

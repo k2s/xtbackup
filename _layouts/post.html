@@ -9,9 +9,5 @@ layout: default
 
 <div id="home">
     <h3>All usage tutorials</h3>
-    <ul class="posts">
-        {% for post in site.posts %}
-        <li><a href="/xtbackup{{ post.url }}">{{ post.title }}</a></li>
-        {% endfor %}
-    </ul>
+    {% include post_list.html %}
 </div>

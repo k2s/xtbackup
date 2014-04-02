@@ -3,17 +3,11 @@ xtBackup
 
 Development of this project was sponsored by [xtmotion.com](http://www.xtmotion.com).
 
-**!!! THIS PROJECT IS IN BETA STAGE !!!**
-
-You should use it only for testing purposes and not in production.
-The Authors will not be responsible for any damage users may suffer, including but not limited to, loss of data.
-
 Requirements
 ------------
 
 * PHP 5.3 and above
   * with SQLite support
-* current implementation of the PHP-AWS library doesn't support files over 2GB on 32bit architecture
 
 Features
 --------
@@ -35,6 +29,7 @@ Features
 * backup to Amazon S3 storage
   * parallel upload multiple parts of huge files
   * multiple backups into the same bucket
+  * on 32bit architecture, current implementation of the PHP-AWS library doesn't support files over 2GB
 * configurable independent output drivers
   * output to console
   * log into sqlite database
@@ -62,9 +57,9 @@ Configuration
 
 ### Quick
 
-* run: `xtbackup.php --init > myconfig.ini`
+* run: `php -f xtbackup.php -- --init > myconfig.ini`
 * edit myconfig.ini
-* run: `xtbackup.php ini[]=myconfig.ini`
+* run: `php -f xtbackup.php -- ini[]=myconfig.ini`
 
 ### Configuration explained
 
@@ -109,6 +104,13 @@ Support
 -------
 
 Submit issues or support requests to <http://github.com/k2s/xtbackup/issues>.
+
+Warranty
+--------
+
+USE ON YOUR OWN RISK. WITHOUT ANY EXPRESS OR IMPLIED WARRANTIES.
+This project is used in production environment to backup data and MySQL databases to local and S3 storage.
+The Authors will not be responsible for any damage users may suffer, including but not limited to, loss of data.
 
 Resources
 ---------

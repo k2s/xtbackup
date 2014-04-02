@@ -856,7 +856,7 @@ class Log
     protected $_prefix = "";
     protected $_output;
     protected $_wrap = "log-process";
-    protected $_sql = "";
+    public $_sql = "";
 
     public function __construct($echo, $taskLevel = 0)
     {
@@ -915,8 +915,9 @@ class Log
     {
         $s = "-- SQL\n$sql\n-- SQL\n";
         if ($this->_output['log-sql-exec'] === 1) {
-            $this->wrapOutput('log-sql-exec', function () use ($s) {
-                $this->log($s);
+            $obj = $this;
+            $this->wrapOutput('log-sql-exec', function () use ($obj, $s) {
+                $obj->log($s);
             });
         } else {
             $this->_sql = $s;
@@ -925,17 +926,18 @@ class Log
 
     public function sqlWarn($msg)
     {
+        $obj = $this;
         if ($this->_output['log-sql-warn']) {
             if ($this->_sql) {
                 if ($this->_output['log-sql-exec'] === 2) {
-                    $this->wrapOutput('log-sql-exec', function () {
-                        $this->log($this->_sql);
+                    $this->wrapOutput('log-sql-exec', function () use ($obj) {
+                        $obj->log($obj->_sql);
                     });
                 }
                 $this->_sql = "";
             }
-            $this->wrapOutput('log-sql-warn', function () use ($msg) {
-                $this->log("#" . $msg);
+            $this->wrapOutput('log-sql-warn', function () use ($obj, $msg) {
+                $obj->log("#" . $msg);
             });
         }
     }

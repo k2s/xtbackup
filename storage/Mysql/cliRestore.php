@@ -48,7 +48,7 @@ TXT
         'force' => array('switch' => array('f', 'force'), 'type' => GETOPT_SWITCH, 'help' => 'will not prompt user to approve restore'),
         'quite' => array('switch' => array('q', 'quite'), 'type' => GETOPT_SWITCH, 'help' => 'will not print messages'),
         'log-process' => array('switch' => array('log-process'), 'type' => GETOPT_VAL, 'default' => 1, 'help' => 'print messages describing restore process (0=off, 1=on)'),
-        'log-sql-warn' => array('switch' => array('log-sql-warn'), 'type' => GETOPT_VAL, 'default' => 1, 'help' => 'print MySQL server warning messagesv (0=off, 1=on)'),
+        'log-sql-warn' => array('switch' => array('log-sql-warn'), 'type' => GETOPT_VAL, 'default' => 1, 'help' => 'print MySQL server warning messages (0=off, 1=on)'),
         'log-sql-exec' => array('switch' => array('log-sql-exec'), 'type' => GETOPT_VAL, 'default' => 2, 'help' => 'print executed SQL statements (0=off, 1=all, 2=if SQL warning found)'),
         'help' => array('switch' => array('?', 'help'), 'type' => GETOPT_SWITCH, 'help' => 'display instruction how to use cli.php'),
     );

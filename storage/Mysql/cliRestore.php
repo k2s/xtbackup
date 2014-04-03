@@ -45,6 +45,7 @@ if data had to be decompressed on import this will happen after import completes
 \treplace - keep decompressed and delete compressed
 TXT
         ),
+        'remove-files' => array('switch' => array('remove-files'), 'type' => GETOPT_VAL, 'help' => '(csv=decompressed data files|z=compressed data files) data load, for security reason you have to add ^ before value to physically remove files'),
         'force' => array('switch' => array('f', 'force'), 'type' => GETOPT_SWITCH, 'help' => 'will not prompt user to approve restore'),
         'quite' => array('switch' => array('q', 'quite'), 'type' => GETOPT_SWITCH, 'help' => 'will not print messages'),
         'log-process' => array('switch' => array('log-process'), 'type' => GETOPT_VAL, 'default' => 1, 'help' => 'print messages describing restore process (0=off, 1=on)'),
@@ -116,6 +117,12 @@ if ($opts['decompress-only']) {
 
 if ($opts['clone-to']) {
     $restore->cloneTo();
+    // end with return code
+    die($restore->getReturnCode());
+}
+
+if ($opts['remove-files']) {
+    $restore->removeFiles($opts['remove-files']);
     // end with return code
     die($restore->getReturnCode());
 }
@@ -314,6 +321,68 @@ class RestoreMysql
         $s = substr($o, 0, 2);
         if ($s == "~/" || $s == "~\\") {
             $o = getenv("HOME") . substr($o, 1);
+        }
+    }
+
+    protected function _removeDataFiles($removeExt, $checkExt, $listOnly)
+    {
+        $path = $this->_backupFolder . 'data' . DIRECTORY_SEPARATOR;
+        if (!file_exists($path)) {
+            throw new Exception("Data folder '$path' is missing.");
+        }
+        if (false !== ($handle = opendir($path))) {
+            while (false !== ($subPath = readdir($handle))) {
+                if ($subPath != "." && $subPath != "..") {
+                    $parts = pathinfo($subPath);
+                    if (!array_key_exists("extension", $parts)) {
+                        $parts["extension"] = "";
+                    }
+
+                    if ($parts["extension"] === $removeExt) {
+                        $counterPart = $path . $parts["filename"] . '.' . $checkExt;
+                        if (file_exists($counterPart)) {
+                            $this->_log->log("REMOVE: $subPath");
+                            if (!$listOnly) {
+                                unlink($path . $subPath);
+                            }
+                        } else {
+                            $this->_log->log("KEEP: $subPath ... missing $counterPart");
+                        }
+                    }
+                }
+            }
+            closedir($handle);
+        }
+    }
+
+    public function removeFiles($what)
+    {
+        // check if user really wants to delete files from disk
+        $forceChar = "^";
+        $listOnly = true;
+        if ($what[0]===$forceChar) {
+            $what = substr($what, 1);
+            $listOnly = false;
+        }
+        // process file removal
+        switch ($what) {
+            case "csv":
+                $this->_log->start("removing extracted data files (if compressed file exists)");
+                $this->_removeDataFiles("", "z", $listOnly);
+                $this->_log->end();
+                break;
+            case "z":
+                $this->_log->start("removing compressed data files (if extracted file exists)");
+                $this->_removeDataFiles("z", "", $listOnly);
+                $this->_log->end();
+                break;
+            default:
+                // invalid parameter
+                throw new Exception("Unknown remove-files action '" . $this->_opts['remove-files'] . "'.");
+        }
+
+        if ($listOnly) {
+            $this->_log->log("This was DRY run, you have to add '$forceChar' before '$what' value to really physically remove files from disk.");
         }
     }
 

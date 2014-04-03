@@ -37,6 +37,7 @@ TXT
         'filter-ext' => array('switch' => array('F', 'filter-ext'), 'type' => GETOPT_VAL, 'help' => 'external command which returns 1 if object action should be processes'),
         'clone-to' => array('switch' => array('C', 'clone-to'), 'type' => GETOPT_VAL, 'help' => 'provide folder where you want to copy backup data, filter will be applied, if value ends with zip data will be compressed'),
         'decompress-only' => array('switch' => array('do', 'decompress-only'), 'type' => GETOPT_SWITCH, 'help' => 'decompress data files only'),
+        'decompress-method' => array('switch' => array('decompress-method'), 'type' => GETOPT_VAL, 'default' => 'php-gz', 'help' => '(php-gz=internal PHP zlib, gunzip=system utility) decompress data files only'),
         'decompress-folder' => array('switch' => array('df', 'decompress-folder'), 'type' => GETOPT_VAL, 'help' => 'if data have to be uncompressed it will happen into data folder, you may change this with this option'),
         'decompress-action' => array('switch' => array('da', 'decompress-action'), 'type' => GETOPT_VAL, 'default' => 'delete', 'help' => <<<TXT
 if data had to be decompressed on import this will happen after import completes:
@@ -218,6 +219,14 @@ class RestoreMysql
                 throw new Exception("Unknown decompress action '" . $this->_opts['decompress-action'] . "'.");
         }
 
+        switch ($this->_opts['decompress-method']) {
+            case 'php-gz':
+            case 'gunzip':
+                break;
+            default:
+                throw new Exception("Unknown decompress method '" . $this->_opts['decompress-method'] . "'.");
+        }
+
         if ($action == self::VALIDATE_DECOMPRESS) {
             return;
         }
@@ -360,7 +369,7 @@ class RestoreMysql
         // check if user really wants to delete files from disk
         $forceChar = "^";
         $listOnly = true;
-        if ($what[0]===$forceChar) {
+        if ($what[0] === $forceChar) {
             $what = substr($what, 1);
             $listOnly = false;
         }
@@ -574,15 +583,21 @@ SQL;
 
     public function decompressFile($srcFile, $dstFile)
     {
-        echo "decompress $srcFile to $dstFile\n";
-        $fp = fopen($dstFile, "w");
-        $zp = gzopen($srcFile, "r");
-        while (!gzeof($zp)) {
-            $buf = gzread($zp, 1024 * 1024);
-            fwrite($fp, $buf, strlen($buf));
+//        $this->_log->log("decompress $srcFile to $dstFile");
+        if ($this->_opts['decompress-method'] === "gunzip") {
+            $command = 'gunzip -c ' . escapeshellcmd($srcFile) . ' > ' . escapeshellcmd($dstFile);
+            system($command);
+        } else {
+            $fp = fopen($dstFile, "w");
+            $zp = gzopen($srcFile, "r");
+            while (!gzeof($zp)) {
+                $buf = gzread($zp, 1024 * 1024);
+                fwrite($fp, $buf, strlen($buf));
+            }
+            fclose($fp);
+            gzclose($zp);
         }
-        fclose($fp);
-        gzclose($zp);
+        // TODO add file tests (file size, crc32?)
     }
 
     /**
@@ -642,11 +657,24 @@ SQL;
     {
         $this->validateOpts($this->_opts, self::VALIDATE_DECOMPRESS);
 
-        $path = $this->_backupFolder . 'data' . DIRECTORY_SEPARATOR;
+        $subPath = 'data';
+        $path = $this->_backupFolder . $subPath . DIRECTORY_SEPARATOR;
         if (file_exists($path) && false !== ($handle = opendir($path))) {
             while (false !== ($fn = readdir($handle))) {
                 if ($fn != "." && $fn != "..") {
                     $fullFn = $path . $fn;
+
+                    // evaluate filter
+                    if (substr($fn, -2) === ".z") {
+                        $filterFn = substr($fn, 0, -2);
+                    } else {
+                        $filterFn = $fn;
+                    }
+                    if (1 !== $this->_filterExt($subPath, $filterFn)) {
+                        //$this->_log->subtask()->log("$subPath: skip '$fn' because of external filter");
+                        continue;
+                    }
+
                     if (false === ($afterAction = $this->_handleCompressedFile($fullFn, false))) {
                         // skip this file
                         continue;

@@ -335,7 +335,8 @@ class RestoreMysql
 
     protected function _removeDataFiles($removeExt, $checkExt, $listOnly)
     {
-        $path = $this->_backupFolder . 'data' . DIRECTORY_SEPARATOR;
+        $subPath = 'data';
+        $path = $this->_backupFolder . $subPath . DIRECTORY_SEPARATOR;
         if (!file_exists($path)) {
             throw new Exception("Data folder '$path' is missing.");
         }
@@ -348,6 +349,12 @@ class RestoreMysql
                     }
 
                     if ($parts["extension"] === $removeExt) {
+                        // check external
+                        if (1 !== $this->_filterExt($subPath, $parts["basename"])) {
+                            $this->_log->subtask()->log("$subPath: skip '$parts[filename]' because of external filter");
+                            continue;
+                        }
+
                         $counterPart = $path . $parts["filename"] . '.' . $checkExt;
                         if (file_exists($counterPart)) {
                             $this->_log->log("REMOVE: $subPath");

@@ -9,7 +9,7 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
 
     /**
      * Should data files be compressed
-     * @var bool
+     * @var bool|string
      */
     protected $_compressDataFiles = false;
 
@@ -453,13 +453,21 @@ SQL;
             $this->_outObject(self::KIND_DATA, $def);
             $fn = $store->storeFilenameFor(self::KIND_DATA, $def);
             if ($this->_compressDataFiles) {
-                $f = fopen("compress.zlib://" . $fn . ".z", "w");
+                if ($this->_compressDataFiles==="gzip") {
+                    $f = popen("gzip - -c > " . escapeshellcmd($fn . ".z"), "w");
+                } else {
+                    $f = fopen("compress.zlib://" . $fn . ".z", "w");
+                }
             } else {
                 $f = fopen($fn, "w");
             }
             // TODO handle error opening file
             $this->_tableDataToCsv($def, $f);
-            fclose($f);
+            if ($this->_compressDataFiles==="gzip") {
+                pclose($f);
+            } else {
+                fclose($f);
+            }
         }
     }
 

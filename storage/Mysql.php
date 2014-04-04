@@ -76,7 +76,7 @@ TXT
                 ,
                 'dbname.sql'=>"SQL select which will replace dbname with multiple values (eg. SELECT schema_name as dbname, false as compressdata FROM `information_schema`.`schemata` WHERE schema_name not in ('mysql', 'information_schema'))",
                 'addtobasedir'=>'',
-                'compressdata'=>'compress data files on the fly',
+                'compressdata'=>'compress data files on the fly (true=PHP zlib method, gzip=external utility)',
                 'rotate.days'=>'for how many days should backups be kept',
                 'rotate.weeks'=>'for how many weeks should backups be kept',
                 'rotate.months'=>'for how many months should backups be kept',
@@ -213,11 +213,19 @@ TXT
         }
 
         // fix missing defaults
+        $checkGzip = true;
         foreach ($dbsToBackup as $dbname=>&$dbConfig) {
             if (!array_key_exists('dbname', $dbConfig)) {
                 $dbConfig['dbname'] = $dbname;
             }
             if (!array_key_exists('compressdata', $dbConfig)) {
+                if ($checkGzip && $this->_options['compressdata']==="gzip") {
+                    system("which gzip 2>&1 > /dev/null", $exitVal);
+                    if (0!==$exitVal) {
+                        $this->_out->stop("External tool 'gzip' not found on this system.");
+                    }
+                    $checkGzip = false;
+                }
                 $dbConfig['compressdata'] = $this->_options['compressdata'];
             }
             if (!array_key_exists('addtobasedir', $dbConfig)) {

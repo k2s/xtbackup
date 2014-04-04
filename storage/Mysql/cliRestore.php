@@ -712,15 +712,14 @@ SQL;
                         continue;
                     }
 
-                    $fullFn = realpath($path . $fn);
+                    $fullFn = realpath($path) . DIRECTORY_SEPARATOR . $fn;
                     if (false === ($afterAction = $this->_handleCompressedFile($fullFn))) {
                         // skip this file
                         continue;
                     }
 
-                    $fn = basename($fullFn);
                     // the name could be changed in _handleCompressedFile()
-                    $fullFn = realpath($fullFn);
+                    $fn = basename($fullFn);
 
                     if ($truncate) {
                         $task = $this->_log->subtask()->start("truncating data in table '$fn'");

@@ -5,6 +5,7 @@ title: xtBackup Support
 Support
 -------
 
+Read [FAQ](faq.html) first.
 Submit issues or support requests to <http://github.com/k2s/xtbackup/issues>.
 
 Warranty

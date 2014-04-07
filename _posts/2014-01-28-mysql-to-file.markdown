@@ -5,11 +5,25 @@ title:  "4. Backup MySQL DB to directory"
 categories: "tutorial mysql file"
 ---
 
-# Basic
+## Usage
+
+To run backup you need to execute following command:
+
+``` bash
+php -f xtbackup.php -- ini[]=/path_to/your_ini_file.ini
+```
+of course this should ideally be added to the cron.
+
+You can specify what level of verbosity should be used with following option
+output.cli.verbosity=WARNING
+
+Possible values: CRITICAL, ERROR, WARNING, NOTICE, DEBUG default being NOTICE
+
+## Basic ini file
 
 
 ``` ini
-;;; we want to backup all databases on server
+;;; we want to backup selected databases on server
 storage.mysql.dbname = testdb
 
 ;;; connect to mysql server on localhost as user 'root' without password to build backup
@@ -17,7 +31,6 @@ storage.mysql.host = localhost
 storage.mysql.port = 3306
 storage.mysql.user = root
 storage.mysql.password =
-
 
 ;;; configure rotation schema
 ; set value to
@@ -35,13 +48,14 @@ storage.mysql.dbname.testdb.rotate.weeks = 0
 storage.mysql.dbname.testdb.rotate.months = 0
 
 
-;;; databases will be backuped under this folder
+;;; databases will be backed up under this folder change as required
+
 storage.mysql.basedir = "~/Backups"
 
 ;;; we don't want to move the files to other backup storage, so we use dummy driver
 storage.dummy =
 
-;;; there is not dummy class for compare services, so we use sqlite verions
+;;; new need to set compare service, we use sqlite version(only one implemented at the time of writing this)
 compare.sqlite.file="~/Backups/xtbackupCompare.db"
 
 ;;; let us put everything together
@@ -55,20 +69,14 @@ engine.compare=sqlite
 
 ## All Databases backup - example ini file
 
+Same as basic example, but we specify that we want to backup all DBs
+
 ``` ini
 ;;; we want to backup all databases on server
 storage.mysql.dbname = *
 
 ```
 
-## Selected Database - example ini file
-
-Same as basic example, but we specify DB name here
-
-``` ini
-;;; we want to backup all databases on server
-storage.mysql.dbname = yourdbname
-```
 ## Multiple Databases - example ini file
 ``` ini
 ;;; we want to backup only DBs named "mysql" and "test"
@@ -111,8 +119,8 @@ storage.mysql.basedir = "~/Backups/amazonRdsDb"
 ;;; we don't want to move the files to other backup storage, so we use dummy driver that will cause that files are stored locally
 storage.dummy =
 
-;;; there is not dummy class for compare services, so we use sqlite version
-compare.sqlite.file="/tmp/xtbackupCompare.db"
+;;; new need to set compare service, we use sqlite version(only one implemented at the time of writing this)
+compare.sqlite.file="~/Backups/xtbackupCompare.db"
 
 ;;; let us put everything together
 engine.outputs[]=cli

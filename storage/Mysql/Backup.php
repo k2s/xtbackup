@@ -28,6 +28,7 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
 
     const KIND_DB = "db";
     const KIND_USERS = "users";
+    const KIND_GRANTS = 'grants';
     const KIND_FUNCTIONS = "functions";
     const KIND_TABLES = "tables";
     const KIND_DATA = 'data';
@@ -36,7 +37,6 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
     const KIND_VIEWS = 'views';
     const KIND_TRIGGERS = 'triggers';
     const KIND_PROCEDURES = 'procedures';
-    const KIND_GRANTS = 'grants';
     const KIND_END = 'end';
 
     /**
@@ -45,7 +45,8 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
      */
     protected $_kindsToBackup = array(
         self::KIND_DB,
-        // TODO self::KIND_USERS,
+        self::KIND_USERS,
+        self::KIND_GRANTS,
         self::KIND_FUNCTIONS,
         self::KIND_TABLES,
         self::KIND_DATA,
@@ -54,7 +55,6 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
         self::KIND_VIEWS,
         self::KIND_TRIGGERS,
         self::KIND_PROCEDURES,
-        // TODO self::KIND_GRANTS,
         self::KIND_END,
     );
 
@@ -245,6 +245,98 @@ TXT
     {
     }
 
+    protected function _usersAndGrants($store)
+    {
+        if (in_array(self::KIND_GRANTS, $this->_kindsToBackup)) {
+            $this->_out->logNotice("script users and grants ... '{$this->_dbName}'");
+        } else {
+            $this->_out->logNotice("script users without grants ... '{$this->_dbName}'");
+        }
+
+//        var_dump($this->_parseGrant("GRANT ALL PRIVILEGES ON `tine20`.* TO 'tine20'@'localhost'"));
+//        die;
+
+        $userList = array();
+        foreach ($this->_cachedObjectsToBackup[self::KIND_USERS] as $user) {
+            $q = $this->_db->query("SHOW GRANTS FOR $user");
+            foreach ($q->fetchAll(PDO::FETCH_NUM) as $o) {
+                $g = $this->_parseGrant($o[0]);
+                echo $o[0] . PHP_EOL;
+                var_dump($g);
+                echo "*********" . PHP_EOL;
+            }
+        }
+//        $store->storeDbObject(self::KIND_USERS, "_create", $def);
+        die;
+    }
+
+    protected function _isKeyword($r, $keywords, &$keyword, &$keywordLen)
+    {
+        $found = false;
+        foreach ($keywords as $keyword) {
+
+            $keywordLen = strlen($keyword);
+            if ((strncasecmp($r, $keyword, $keywordLen) === 0) && ((strlen($r) === $keywordLen) || ctype_space($r[$keywordLen]))) {
+                $found = true;
+                break;
+            }
+        }
+
+        return $found;
+    }
+
+    protected function _parseGrant($r)
+    {
+        $ret = array();
+        $data = "";
+        $f = array(array("GRANT"), array("ON"), array("TO"), array("IDENTIFIED", "WITH"));
+        while (count($f)) {
+            $keywords = array_shift($f);
+            $r = ltrim($r);
+            while (0 < strlen($r)) {
+                if ($this->_isKeyword($r, $keywords, $keyword, $keywordLen)) {
+                    $data = trim($data);
+                    switch ($keyword) {
+                        case 'GRANT':
+                            break;
+                        case 'ON':
+                            $ret['grant'] = $data;
+                            break;
+                        case 'TO':
+                            $ret['on'] = $data;
+                            break;
+                        default:
+                            $ret['to'] = $data;
+                            $ret['other'] = trim($r);
+                            $r = "";
+                    }
+                    $r = substr($r, $keywordLen + 1);
+                    $data = "";
+                    break;
+                }
+                $data .= $r[0];
+                $r = substr($r, 1);
+            }
+        }
+        if (!array_key_exists('to', $ret)) {
+            $ret['to'] = $data;
+            $ret['other'] = trim($r);
+        }
+        return $ret;
+    }
+
+    protected function _backupUsers($store)
+    {
+        $this->_usersAndGrants($store);
+    }
+
+    protected function _backupGrants($store)
+    {
+        if (!in_array(self::KIND_USERS, $this->_kindsToBackup)) {
+            $this->_usersAndGrants($store);
+        }
+    }
+
     /**
      * @param Storage_Mysql_IStore $store
      * @param string $kind
@@ -378,7 +470,8 @@ SQL;
      * @param string $sql
      * @return string
      */
-    protected function _removeSecurity(/** @noinspection PhpUnusedParameterInspection */ $kind, &$sql)
+    protected function _removeSecurity(/** @noinspection PhpUnusedParameterInspection */
+        $kind, &$sql)
     {
         /*    switch ($kind) {
                 case self::KIND_FUNCTIONS:
@@ -453,7 +546,7 @@ SQL;
             $this->_outObject(self::KIND_DATA, $def);
             $fn = $store->storeFilenameFor(self::KIND_DATA, $def);
             if ($this->_compressDataFiles) {
-                if ($this->_compressDataFiles==="gzip") {
+                if ($this->_compressDataFiles === "gzip") {
                     $f = popen("gzip - -c > " . escapeshellcmd($fn . ".z"), "w");
                 } else {
                     $f = fopen("compress.zlib://" . $fn . ".z", "w");
@@ -463,7 +556,7 @@ SQL;
             }
             // TODO handle error opening file
             $this->_tableDataToCsv($def, $f);
-            if ($this->_compressDataFiles==="gzip") {
+            if ($this->_compressDataFiles === "gzip") {
                 pclose($f);
             } else {
                 fclose($f);

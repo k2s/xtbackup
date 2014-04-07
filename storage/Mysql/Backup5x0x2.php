@@ -68,20 +68,8 @@ SQL;
 
     protected function _cacheUsers()
     {
-/*
-mysql -BNe "select concat('\'',user,'\'@\'',host,'\'') from mysql.user where user != 'root'" | \
-while read uh; do mysql -BNe "show grants for $uh" | sed 's/$/;/; s/\\\\/\\/g'; done > grants.sql
-
-mysql -B -N $@ -e "SELECT DISTINCT CONCAT(
-    'SHOW GRANTS FOR ''', user, '''@''', host, ''';'
-    ) AS query FROM mysql.user" | \
-  mysql $@ | \
-  sed 's/\(GRANT .*\)/\1;/;s/^\(Grants for .*\)/## \1 ##/;/##/{x;p;x;}'
-
-select * from mysql.user;
- */
-        $this->_cachedObjectsToBackup[self::KIND_USERS] = array();
-        // http://serverfault.com/questions/8860/how-can-i-export-the-privileges-from-mysql-and-then-import-to-a-new-server/13050#13050
+        $q = $this->_db->query("select concat('\'',user,'\'@\'',host,'\'') from mysql.user where user != 'root'");
+        $this->_cachedObjectsToBackup[self::KIND_USERS] = $q->fetchAll(PDO::FETCH_COLUMN);
     }
 
     protected function _cacheGrants()

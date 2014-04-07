@@ -18,6 +18,11 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
      * @var bool
      */
     protected $_filterExtDef = false;
+    /**
+     * Should user passwords be stored in backup as hash
+     * @var bool
+     */
+    protected $_withPasswords = false;
 
     /**
      * @var Output_Interface
@@ -85,6 +90,11 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
     function setFilterExt($filterExtDefinition)
     {
         $this->_filterExtDef = $filterExtDefinition;
+    }
+
+    function setWithPasswords($withPasswords)
+    {
+        $this->_withPasswords = $withPasswords;
     }
 
     function addRestoreScript($folder)
@@ -257,16 +267,32 @@ TXT
 //        die;
 
         $userList = array();
+
+        $fn = $store->storeFilenameFor(self::KIND_USERS, "grants");
+        $f = fopen($fn, "w");
         foreach ($this->_cachedObjectsToBackup[self::KIND_USERS] as $user) {
             $q = $this->_db->query("SHOW GRANTS FOR $user");
             foreach ($q->fetchAll(PDO::FETCH_NUM) as $o) {
-                $g = $this->_parseGrant($o[0]);
-                echo $o[0] . PHP_EOL;
-                var_dump($g);
-                echo "*********" . PHP_EOL;
+                $p = $this->_parseGrant($o[0]);
+                if ($p['db'] === "*" || $p['db'] === $this->_dbName) {
+                    // we don't need to remeber db name
+                    unset($p['db']);
+                    // add user to unique list for user creation
+                    if (!array_key_exists($p['to'], $userList)) {
+                        $userList[$p['to']] = $p['to'] . ":";
+                    }
+                    // remember password if wanted
+                    if ($this->_withPasswords && array_key_exists('password', $p)) {
+                        $userList[$p['to']] .= $p['password'];
+                    }
+                    unset($p['password']);
+                    // store grant privileges
+                    fputcsv($f, $p);
+                }
             }
         }
-//        $store->storeDbObject(self::KIND_USERS, "_create", $def);
+        fclose($f);
+        $store->storeDbObject(self::KIND_USERS, "users", implode("\n", $userList));
         die;
     }
 
@@ -287,6 +313,7 @@ TXT
 
     protected function _parseGrant($r)
     {
+        $original = $r;
         $ret = array();
         $data = "";
         $f = array(array("GRANT"), array("ON"), array("TO"), array("IDENTIFIED", "WITH"));
@@ -303,7 +330,12 @@ TXT
                             $ret['grant'] = $data;
                             break;
                         case 'TO':
-                            $ret['on'] = $data;
+                            if (preg_match("/`?([^\.`]*)`?(\..*)/", $data, $a)) {
+                                $ret['db'] = $a[1];
+                                $ret['on'] = $a[2];
+                            } else {
+                                $this->_out->logCritical("Can't parse ON parameter '$data' in: $original");
+                            }
                             break;
                         default:
                             $ret['to'] = $data;
@@ -322,6 +354,13 @@ TXT
             $ret['to'] = $data;
             $ret['other'] = trim($r);
         }
+
+        // handle password in other
+        if (preg_match("/IDENTIFIED BY (PASSWORD)? '(.*)'/", $ret['other'], $a)) {
+            $ret['password'] = $a[2];
+            $ret['other'] = trim(preg_replace("/IDENTIFIED BY (PASSWORD)? '.*'/", '', $ret['other']));
+        }
+
         return $ret;
     }
 

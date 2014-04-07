@@ -794,7 +794,7 @@ class Core_Engine
             $version = self::VERSION;
             if ("?" == substr($version, -1)) {
                 // try to determine revision number from git
-                self::$_version = substr($version, 0, -1) . self::getRevisionFromGit(ENGINE_DIR);
+                self::$_version = substr($version, 0, -1);
             }
         }
 
@@ -804,21 +804,6 @@ class Core_Engine
     static public function isWindows()
     {
         return self::$_isWindows;
-    }
-
-    /**
-     * Obtain information about current git checkout
-     *
-     * It is useful also for extensions.
-     *
-     * @static
-     * @param string $path path where to look for version
-     * @return string revision description
-     */
-    static public function getRevisionFromGit($path)
-    {
-        // TODO we need to study git more and build this method
-        return "UNKNOWN";
     }
 
     static public function getConfigOptions($part = null)

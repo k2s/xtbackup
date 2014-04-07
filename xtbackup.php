@@ -36,7 +36,7 @@ if (false!==$helpIdx) {
 }
 
 // it is possible to suppress output to console in start phase of engine
-$quiteStartIdx = array_search("--quite-start", $argv);
+$quiteStartIdx = array_search("--quiet-start", $argv);
 if (false!==$quiteStartIdx) {
     unset($argv[$quiteStartIdx]);
 }

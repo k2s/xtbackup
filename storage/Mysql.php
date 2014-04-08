@@ -61,6 +61,7 @@ class Storage_Mysql extends Storage_Filesystem implements Storage_Mysql_IStore
                 'rotate' => array('days' => 0, 'weeks' => 0, 'months' => 0),
                 'filter-ext' => false,
                 'with-passwords' => false,
+                'server-location' => 'auto'
             ),
             CfgPart::DESCRIPTIONS => array(
                 'host' => 'mysql server host name',
@@ -84,6 +85,7 @@ TXT
                 'rotate.months' => 'for how many months should backups be kept',
                 'filter-ext' => "specify external filter application like 'php -f filter.php -- '",
                 'with-passwords' => 'if true hash of user passwords will be stored',
+                'server-location' => 'if server is able to access backup folder (auto=try to detect,local=server able to write to backup folder,remote=slower as local)'
             ),
             CfgPart::REQUIRED => array('dbname')
         );
@@ -244,6 +246,9 @@ TXT
             if (!array_key_exists('with-passwords', $dbConfig)) {
                 $dbConfig['with-passwords'] = $this->_options['with-passwords'];
             }
+            if (!array_key_exists('server-location', $dbConfig)) {
+                $dbConfig['server-location'] = $this->_options['server-location'];
+            }
         }
 
         // backup database(s)
@@ -256,6 +261,7 @@ TXT
             $this->_driver->setDataCompression($dbConfig['compressdata']);
             $this->_driver->setFilterExt($dbConfig['filter-ext']);
             $this->_driver->setWithPasswords($dbConfig['with-passwords']);
+            $this->_driver->setServerLocation($dbConfig['server-location']);
 
             $createForced = false;
             if ($dbConfig['addtobasedir']) {

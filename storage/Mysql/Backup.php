@@ -23,6 +23,10 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
      * @var bool
      */
     protected $_withPasswords = false;
+    /**
+     * @var string
+     */
+    protected $_serverLocation = 'auto';
 
     /**
      * @var Output_Interface
@@ -95,6 +99,11 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
     function setWithPasswords($withPasswords)
     {
         $this->_withPasswords = $withPasswords;
+    }
+
+    function setServerLocation($serverLocation)
+    {
+        $this->_serverLocation = $serverLocation;
     }
 
     function addRestoreScript($folder)
@@ -547,10 +556,34 @@ SQL;
     protected function _backupData($store)
     {
         // TODO detect if server is localhost and if it is possible to use faster local backup command
-        if (false) {
-            $this->_backupDataFromLocal($store);
-        } else {
-            $this->_backupDataFromRemote($store);
+        switch ($this->_serverLocation) {
+            case 'local':
+                $this->_out->logNotice("doing 'local' data backup");
+                $this->_backupDataFromLocal($store);
+                break;
+            case 'remote':
+                $this->_out->logNotice("doing 'remote' data backup");
+                $this->_backupDataFromRemote($store);
+                break;
+            default:
+                // try to detect best possibility
+                $s = $this->_db->getAttribute(PDO::ATTR_CONNECTION_STATUS);
+                $this->_out->logNotice("connection status: $s");
+                if (stripos($s, "localhost") === false && stripos($s, "127.0.0.1") === false) {
+                    // remote
+                    $this->_out->logNotice("detected 'remote' data backup");
+                    $this->_backupDataFromRemote($store);
+                } else {
+                    // maybe local will work
+                    try {
+                        $this->_out->logNotice("trying 'local' data backup");
+                        $this->_backupDataFromLocal($store);
+                    } catch (Exception $ex) {
+                        $this->_out->logNotice("fallback to 'remote' data backup");
+                        $this->_backupDataFromRemote($store);
+                    }
+                }
+                die;
         }
     }
 

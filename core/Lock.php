@@ -43,7 +43,7 @@ class Core_Lock
     public function __construct($iniOptions, $output)
     {
         $this->_iniOptions = $iniOptions;
-        $this->_cmdOptions = $iniOptions['ini'];
+        $this->_cmdOptions = array_key_exists('ini', $iniOptions) ? $iniOptions['ini'] : array();
         $this->_output = $output;
         $this->initFileLock();
         $this->_output->logDebug(">>>Lock object was initialised");

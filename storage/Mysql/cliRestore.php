@@ -135,7 +135,7 @@ if ($opts['user-handling'] === "only-list") {
         die(RestoreMysql::RETCODE_OK);
     } else {
         echo PHP_EOL . "Missing DB user(s) found !" . PHP_EOL;
-        die(1);
+        die(RestoreMysql::RETCODE_MISSING_USERS);
     }
 }
 
@@ -163,6 +163,12 @@ class RestoreMysql
     const RETCODE_OK = 0;
     const RETCODE_USER_CANCEL = 1;
     const RETCODE_PARAM_ERROR = 2;
+    const RETCODE_MISSING_USERS = 3;
+
+    /**
+     * @var int
+     */
+    protected $_retCode = self::RETCODE_OK;
 
     /**
      * @var array
@@ -302,8 +308,12 @@ class RestoreMysql
 
     public function getReturnCode()
     {
-        // no error
-        return self::RETCODE_OK;
+        return $this->_retCode;
+    }
+
+    public function setReturnCode($retCode)
+    {
+        $this->_retCode = $retCode;
     }
 
     /**
@@ -505,6 +515,24 @@ class RestoreMysql
         $opts = & $this->_opts;
         $folder = & $this->_backupFolder;
 
+        // create users
+        $log->start("USERS create");
+        switch ($opts['user-handling']) {
+            case 'create':
+                $this->createUsers(false);
+                break;
+            case 'with-password':
+                $this->createUsers(true);
+                break;
+            default:
+                if (count($this->missingUsers(true))>0) {
+                    $this->_log->end();
+                    $this->_log->log("Restore will not continue, missing users on server found. Change --user-handling parameter to solve this problem.");
+                    $this->setReturnCode(self::RETCODE_MISSING_USERS);
+                    return;
+                }
+        }
+
         // drop database if requested
         if ($opts['drop-db']) {
             $log->start("DB drop");
@@ -542,19 +570,6 @@ class RestoreMysql
         /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 SQL;
         $db->exec($sql);
-
-        // create users
-        $log->start("USERS create");
-        switch ($opts['user-handling']) {
-            case 'create':
-                $this->createUsers(false);
-                break;
-            case 'with-password':
-                $this->createUsers(true);
-                break;
-            default:
-                $this->missingUsers(true);
-        }
 
         // create functions
         $log->start("FUNCTIONS create");

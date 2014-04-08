@@ -293,7 +293,6 @@ TXT
         }
         fclose($f);
         $store->storeDbObject(self::KIND_USERS, "users", implode("\n", $userList));
-        die;
     }
 
     protected function _isKeyword($r, $keywords, &$keyword, &$keywordLen)

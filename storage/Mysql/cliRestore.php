@@ -908,7 +908,7 @@ SQL
         return $users;
     }
 
-    public function missingUsers($print=false)
+    public function missingUsers($print = false)
     {
         $missing = array();
 
@@ -951,7 +951,14 @@ SQL
 
     function grantPermissions()
     {
-
+        $dbName = $this->_opts['database'];
+        if (($f = fopen($this->_backupFolder . '/users/grants', "r")) !== FALSE) {
+            while (($d = fgetcsv($f, 1000, ",")) !== FALSE) {
+                $sql = "GRANT $d[0] ON `$dbName`$d[1] TO $d[2] $d[3]";
+                $this->_db->exec($sql);
+            }
+            fclose($f);
+        }
     }
 }
 

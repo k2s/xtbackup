@@ -33,6 +33,7 @@ tr- triggers
 g - permission grants
 TXT
         ),
+        'user-handling' => array('switch' => array('user-handling'), 'type' => GETOPT_VAL, 'default' => 'check', 'help' => '(check|create|with-password|only-list) how to restore user accounts'),
         'create-index' => array('switch' => array('create-index'), 'type' => GETOPT_VAL, 'default' => 'before', 'help' => '(before|after) data load'),
         'filter-ext' => array('switch' => array('F', 'filter-ext'), 'type' => GETOPT_VAL, 'help' => 'external command which returns 1 if object action should be processes'),
         'clone-to' => array('switch' => array('C', 'clone-to'), 'type' => GETOPT_VAL, 'help' => 'provide folder where you want to copy backup data, filter will be applied, if value ends with zip data will be compressed'),
@@ -128,6 +129,16 @@ if ($opts['remove-files']) {
     die($restore->getReturnCode());
 }
 
+if ($opts['user-handling'] === "only-list") {
+    if (count($restore->missingUsers(true)) === 0) {
+        echo PHP_EOL . "All DB users found." . PHP_EOL;
+        die(RestoreMysql::RETCODE_OK);
+    } else {
+        echo PHP_EOL . "Missing DB user(s) found !" . PHP_EOL;
+        die(1);
+    }
+}
+
 /** prompt if to continue **/
 if (!$opts['force']) {
     echo "do you want to start restore (y<enter>) ?";
@@ -208,6 +219,15 @@ class RestoreMysql
             $this->_opts['decompress-folder'] = $this->_backupFolder . 'data' . DIRECTORY_SEPARATOR;
         } else {
             $this->_opts['decompress-folder'] = $this->_fixFolderName($this->_opts['decompress-folder']);
+        }
+
+        switch ($this->_opts['user-handling']) {
+            case "check":
+            case "create":
+            case "with-password":
+                break;
+            default:
+                throw new Exception("Unknown --user-handling parameter '" . $this->_opts['user-handling'] . "'.");
         }
 
         switch ($this->_opts['decompress-action']) {
@@ -298,6 +318,9 @@ class RestoreMysql
 
     protected function _connectMysql()
     {
+        if ($this->_db) {
+            return;
+        }
         /** connect to DB **/
         $this->_log->start("establishing DB connection");
         if ($this->_opts['socket']) {
@@ -503,7 +526,7 @@ class RestoreMysql
         }
 
         // change to DB
-        $db->query("use `$opts[database]`");
+        $db->exec("use `$opts[database]`");
 
         // prepare import
         $sql = <<<SQL
@@ -522,7 +545,16 @@ SQL;
 
         // create users
         $log->start("USERS create");
-        $this->execSqlFromFolder("users");
+        switch ($opts['user-handling']) {
+            case 'create':
+                $this->createUsers(false);
+                break;
+            case 'with-password':
+                $this->createUsers(true);
+                break;
+            default:
+                $this->missingUsers(true);
+        }
 
         // create functions
         $log->start("FUNCTIONS create");
@@ -574,7 +606,7 @@ SQL;
 
         // create grants
         $log->start("GRANTS apply");
-        $this->execSqlFromFolder("grants");
+        $this->grantPermissions("grants");
 
         /*
         // finish import
@@ -857,6 +889,70 @@ SQL
         // try again
         $this->execSqlFromArray($repeat);
     }
+
+    protected function _parseUserHost($s, &$user, &$host)
+    {
+        list($user, $host) = explode('@', $s, 2);
+        $user = str_replace("'", "", $user);
+        $host = str_replace("'", "", $host);
+    }
+
+    protected function _userList()
+    {
+        $users = file($this->_backupFolder . '/users/users');
+        foreach ($users as &$l) {
+            $l = trim($l);
+            $l = explode(':', $l, 2);
+            $this->_parseUserHost($l[0], $l['user'], $l['host']);
+        }
+        return $users;
+    }
+
+    public function missingUsers($print=false)
+    {
+        $missing = array();
+
+        $this->_connectMysql();
+
+        foreach ($this->_userList() as $u) {
+            $exits = $this->_db->query(
+                sprintf("SELECT count(*) FROM mysql.user WHERE user = %s and host = %s",
+                    $this->_db->quote($u['user']), $this->_db->quote($u['host'])
+                )
+            )->fetchColumn();
+            if (!$exits) {
+                if ($print) {
+                    $this->_log->log('! missing DB user:' . $u[0]);
+                }
+                $missing[] = $u;
+            }
+        }
+
+        return $missing;
+    }
+
+    function createUsers($withPassword)
+    {
+        $missing = $this->missingUsers();
+        foreach ($missing as $u) {
+            $sql = "CREATE USER $u[0]";
+            if ($withPassword) {
+                if ($u[1]) {
+                    $sql .= " IDENTIFIED BY '$u[1]'";
+                } else {
+                    $this->_log->log("! security risk: user '$u[0]' contains empty password in backup");
+                }
+            } else {
+                $this->_log->log("! security risk: user '$u[0]' was created with empty password");
+            }
+            $this->_db->exec($sql);
+        }
+    }
+
+    function grantPermissions()
+    {
+
+    }
 }
 
 
@@ -931,6 +1027,11 @@ class DbWrapper
     {
         $this->_log->sql($sql);
         return $this->_checkWarnings($this->_db->query($sql));
+    }
+
+    public function quote($s)
+    {
+        return $this->_db->quote($s);
     }
 
     protected function _checkWarnings($ret)

@@ -9,6 +9,11 @@ FAQ
 
 #### Why PHP ####
 
+* xtbackup runs on most shared web hosting plans
+* many skilled programmers around to improve and extend xtbackup
+* good support for object oriented programming to provide solid framework to build backup solution
+* used often for open source projects
+
 ### MySQL ###
 
 #### What format do have files in data folder ####

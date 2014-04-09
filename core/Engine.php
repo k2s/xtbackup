@@ -21,12 +21,6 @@ class Core_Engine
     const ROLE_LOCAL = "local";
     const ROLE_COMPARE = "compare";
     /**
-     * Cached final version of core engine
-     *
-     * @var string
-     */
-    protected static $_version = false;
-    /**
      * Output object, used to do logging and progress visualization tasks
      *
      * @var Output_Interface
@@ -790,15 +784,7 @@ class Core_Engine
      */
     static public function getVersion()
     {
-        if (false === self::$_version) {
-            $version = self::VERSION;
-            if ("?" == substr($version, -1)) {
-                // try to determine revision number from git
-                self::$_version = substr($version, 0, -1);
-            }
-        }
-
-        return self::$_version;
+        return self::VERSION;
     }
 
     static public function isWindows()

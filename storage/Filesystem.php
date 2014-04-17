@@ -336,11 +336,15 @@ class Storage_Filesystem implements Storage_Interface
 
     function refreshRemote($myrole, $drivers)
     {
-        throw new Exception("Currently Filesystem driver can't be used as remote driver. Ask for this on https://github.com/k2s/xtbackup.");
+        if ($this->_asRemote) {
+            throw new Exception("Currently Filesystem driver can't be used as remote driver. Ask for this on https://github.com/k2s/xtbackup.");
+        }
     }
 
     function updateRemote($myrole, $drivers)
     {
-        throw new Exception("Currently Filesystem driver can't be used as remote driver. Ask for this on https://github.com/k2s/xtbackup.");
+        if ($this->_asRemote) {
+            throw new Exception("Currently Filesystem driver can't be used as remote driver. Ask for this on https://github.com/k2s/xtbackup.");
+        }
     }
 }

@@ -630,11 +630,15 @@ TXT
 
     function refreshLocal($myrole, $drivers)
     {
-        throw new Exception("Currently S3 driver can't be used as local driver. Ask for this on https://github.com/k2s/xtbackup.");
+        if (!$this->_asRemote) {
+            throw new Exception("Currently S3 driver can't be used as local driver. Ask for this on https://github.com/k2s/xtbackup.");
+        }
     }
 
     function updateLocal($myrole, $drivers)
     {
-        throw new Exception("Currently S3 driver can't be used as local driver. Ask for this on https://github.com/k2s/xtbackup.");
+        if (!$this->_asRemote) {
+            throw new Exception("Currently S3 driver can't be used as local driver. Ask for this on https://github.com/k2s/xtbackup.");
+        }
     }
 }

@@ -333,15 +333,14 @@ class Storage_Filesystem implements Storage_Interface
             return array_key_exists($part, $opt) ? $opt[$part] : array();
         }
     }
-/*
+
     function refreshRemote($myrole, $drivers)
     {
-        throw new Exception("refreshRemote not supported in Filesystem driver");
+        throw new Exception("Currently Filesystem driver can't be used as remote driver. Ask for this on https://github.com/k2s/xtbackup.");
     }
 
     function updateRemote($myrole, $drivers)
     {
-        throw new Exception("updateRemote not supported in Filesystem driver");
+        throw new Exception("Currently Filesystem driver can't be used as remote driver. Ask for this on https://github.com/k2s/xtbackup.");
     }
-*/
 }

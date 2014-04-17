@@ -106,6 +106,9 @@ class Storage_S3 implements Storage_Interface
         if (!isset($this->_options['key']['secret'])) {
             throw new Core_StopException("You have to define S3 option key.secret.", "S3Init");
         }
+        if (!isset($this->_options['bucket'])) {
+            throw new Core_StopException("You have to define S3 option bucket.", "S3Init");
+        }
         if (!is_null($this->_options['multipart']['part-size']) && ($this->_options['multipart']['part-size'] < 5 || $this->_options['multipart']['part-size'] > 5120)) {
             throw new Core_StopException(
                 "multipart.part-size has to be in range from 5MB to 500MB. It is Amazon S3 restriction. Current value is {$this->_options['multipart']['part-size']}MB.",

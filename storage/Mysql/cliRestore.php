@@ -199,7 +199,7 @@ class RestoreMysql
     {
         $this->_opts = $opts;
 
-        $this->_backupFolder = $backupFolder;
+        $this->_backupFolder = $this->_fixFolderName($backupFolder);
 
         $this->_originalDbName = file_get_contents($this->_backupFolder . '/db/_name');
         if (!$this->_opts['database']) {
@@ -215,12 +215,12 @@ class RestoreMysql
 
     protected function _fixFolderName($folder)
     {
-        return rtrim($folder, "/\\") . DIRECTORY_SEPARATOR;
+        self::tildeToHome($folder);
+        return rtrim(realpath($folder), "/\\") . DIRECTORY_SEPARATOR;
     }
 
     public function validateOpts($opts, $action = self::VALIDATE_RESTORE)
     {
-        $this->_backupFolder = $this->_fixFolderName($this->_backupFolder);
         if (!$this->_opts['decompress-folder']) {
             $this->_opts['decompress-folder'] = $this->_backupFolder . 'data' . DIRECTORY_SEPARATOR;
         } else {

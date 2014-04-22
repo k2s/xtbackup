@@ -583,7 +583,6 @@ SQL;
                         $this->_backupDataFromRemote($store);
                     }
                 }
-                die;
         }
     }
 

@@ -36,7 +36,7 @@ line 3: We have to manually specify driver class, because the driver class to be
 line 4: Except storage drivers we have to configure compare driver. Minimal configuration requires where sqlite database file should be stored.
 This location shouldn't be on temporary device,
 
-Next lines configure engine driver and bound everything together.
+Next lines configure engine driver and bind everything together.
 
 line 7: the key `local` maps storage configuration key which will be used as data source
 

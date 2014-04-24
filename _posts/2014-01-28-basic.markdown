@@ -5,14 +5,18 @@ date:   2014-01-28 09:00:01
 categories: tutorial
 ---
 
-### Driver based code
+## Usage
 
-### Engine
+To run backup you need to execute following command:
 
-### Storage driver
+``` bash
+php -f xtbackup.php -- ini[]=/path_to/your_ini_file.ini
+```
+of course this should ideally be added to the cron with MAILTO directive setup so you get notification.
 
-### Filter driver
+You can specify what level of verbosity should be used with following option
+output.cli.verbosity=WARNING
 
-### Compare driver
+Possible values: CRITICAL, ERROR, WARNING, NOTICE, DEBUG default being NOTICE
 
-### Output driver
+See link to INI examples below

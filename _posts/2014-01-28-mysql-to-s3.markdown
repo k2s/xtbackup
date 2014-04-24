@@ -16,9 +16,10 @@ Same INI setting can be used as in [Backup MySQL DB to directory] [1] with only 
 storage.s3.bucket=<Amazon S3 bucket name>
 
 ;;; generate "Access Keys" in Security Credentials in https://aws-portal.amazon.com/gp/aws/developer/account/
-; This needs to be filled in if you want ot use s3 as storage, however prefered way is to use private INI file
-; that can be stored in the more secure folder with limited access. So if you do not use separate INI file please
-; uncomment below lines and fill in credentials.
+; This needs to be filled in if you want ot use s3 as storage, however preferred way is to use private INI file
+; that can be stored in the more secure folder with limited access. That way you can avoid accidentally committing
+; your AWS credentials to potentially public repositories and losing $$$ in the process http://pulse.me/s/13oajD
+; So if you do not use separate INI file please uncomment below lines and fill in credentials.
 ;storage.s3.key.access=<access key>
 ;storage.s3.key.secret=<secret>
 

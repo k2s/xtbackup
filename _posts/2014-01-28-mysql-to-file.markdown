@@ -12,7 +12,7 @@ To run backup you need to execute following command:
 ``` bash
 php -f xtbackup.php -- ini[]=/path_to/your_ini_file.ini
 ```
-of course this should ideally be added to the cron.
+of course this should ideally be added to the cron with MAILTO directive setup so you get notification.
 
 You can specify what level of verbosity should be used with following option
 output.cli.verbosity=WARNING
@@ -49,7 +49,6 @@ storage.mysql.dbname.testdb.rotate.months = 0
 
 
 ;;; databases will be backed up under this folder change as required
-
 storage.mysql.basedir = "~/Backups"
 
 ;;; we don't want to move the files to other backup storage, so we use dummy driver

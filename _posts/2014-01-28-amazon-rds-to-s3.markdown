@@ -13,13 +13,11 @@ have 100% guarantee of consistent data without affecting live instance whatsoeve
 
 ## Amazon RDS database - example ini file
 
-``` ini
+{% highlight ini linenos %}
 ;;; Amazon RDS configuration
 storage.mysqlAmazonRds.storage = mysql
 storage.mysqlAmazonRds.dbinstance = <dbinstancename>
-; you can specify where the backup instance should be created
 storage.mysqlAmazonRds.region = REGION_EU_W1
-; you can specify class of instance (allow some saving if you use smaller instance that used for the live instance
 storage.mysqlAmazonRds.dbinstanceclass = db.m1.small
 
 ;;; we want to backup all databases on server
@@ -33,26 +31,39 @@ storage.mysql.password = userpassword
 ;;; databases will be backuped under this folder
 storage.mysql.basedir = "~/Backups/amazonRdsDb"
 
-;;; new need to set compare service, we use sqlite version(only one implemented at the time of writing this)
 compare.sqlite.file="~/Backups/xtbackupCompare.db"
 
 storage.s3.bucket=<Amazon S3 bucket name>
 
-;;; generate "Access Keys" in Security Credentials in https://aws-portal.amazon.com/gp/aws/developer/account/
-; This needs to be filled in if you want ot use s3 as storage, however preferred way is to use private INI file
-; that can be stored in the more secure folder with limited access. That way you can avoid accidentally committing
-; your AWS credentials to potentially public repositories and losing $$$ in the process http://pulse.me/s/13oajD
-; So if you do not use separate INI file please uncomment below lines and fill in credentials.
 ;storage.s3.key.access=<access key>
 ;storage.s3.key.secret=<secret>
 
-; set to true if you want to modify data in S3, if you just dry run it set it to simulate
 storage.s3.update=true
-
 
 ;;; let us put everything together
 engine.outputs[]=cli
 engine.local=mysqlAmazonRds
 engine.remote=s3
 engine.compare=sqlite
-```
+{% endhighlight %}
+
+line 3: DB Instance Identifier as specified in the AWS console
+
+line 4: you can specify where the backup instance should be created
+
+line 5: you can specify class of instance, allows some saving if you use smaller instance that used for the live instance
+
+line 18: new need to set compare service, we use sqlite version(only one implemented at the time of writing this) set it up in a persistent space (not tmp) 
+
+line 22-23:
+Generate "Access Keys" in Security Credentials in [your AWS console](https://aws-portal.amazon.com/gp/aws/developer/account/)  
+This needs to be filled in if you want ot use s3 as storage, however preferred way is to use private INI file
+that can be stored in the more secure folder with limited access. That way you can avoid accidentally committing
+your AWS credentials to potentially public repositories and losing $$$ in the process [http://pulse.me/s/13oajD](http://pulse.me/s/13oajD).  
+So if you do not use separate INI file please uncomment this lines and fill in credentials.
+
+line 25: should upload/remove of data be executed? (yes/no/simulate)   
+    yes -      will transfer data to S3  
+    no -       will not start update process  
+    simulate - will output progress, but will not really transfer data
+

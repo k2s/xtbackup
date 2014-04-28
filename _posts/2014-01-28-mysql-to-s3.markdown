@@ -11,19 +11,13 @@ Same INI setting can be used as in [Backup MySQL DB to directory] [1] with only 
 
 [1]: /xtbackup/tutorial/mysql/file/mysql-to-file.html "Backup MySQL DB to directory"
 
-``` ini
+{% highlight ini linenos %}
 
 storage.s3.bucket=<Amazon S3 bucket name>
 
-;;; generate "Access Keys" in Security Credentials in https://aws-portal.amazon.com/gp/aws/developer/account/
-; This needs to be filled in if you want ot use s3 as storage, however preferred way is to use private INI file
-; that can be stored in the more secure folder with limited access. That way you can avoid accidentally committing
-; your AWS credentials to potentially public repositories and losing $$$ in the process http://pulse.me/s/13oajD
-; So if you do not use separate INI file please uncomment below lines and fill in credentials.
 ;storage.s3.key.access=<access key>
 ;storage.s3.key.secret=<secret>
 
-; set to true if you want to modify data in S3, if you just dry run it set it to simulate
 storage.s3.update=true
 
 ; set engines
@@ -31,5 +25,20 @@ engine.outputs[]=cli
 engine.local=mysql
 engine.remote=s3
 engine.compare=sqlite
-```
+{% endhighlight %}
 
+line 1: set your S3 bucked that will be used for this backup
+
+line 3-4:
+Generate "Access Keys" in Security Credentials in [your AWS console](https://aws-portal.amazon.com/gp/aws/developer/account/)  
+This needs to be filled in if you want ot use s3 as storage, however preferred way is to use private INI file
+that can be stored in the more secure folder with limited access. That way you can avoid accidentally committing
+your AWS credentials to potentially public repositories and losing $$$ in the process [http://pulse.me/s/13oajD](http://pulse.me/s/13oajD).  
+So if you do not use separate INI file please uncomment this lines and fill in credentials.
+
+line 8: should upload/remove of data be executed? (yes/no/simulate)   
+    yes -      will transfer data to S3  
+    no -       will not start update process  
+    simulate - will output progress, but will not really transfer data
+
+line 11: set remote storage to s3 

@@ -518,22 +518,26 @@ class RestoreMysql
 
         // create users
         $log->start("USERS create");
-        switch ($opts['user-handling']) {
-            case 'create':
-                $this->createUsers(false);
-                break;
-            case 'with-password':
-                $this->createUsers(true);
-                break;
-            case 'skip':
-                break;
-            default:
-                if (count($this->missingUsers(true))>0) {
-                    $this->_log->end();
-                    $this->_log->log("Restore will not continue, missing users on server found. Change --user-handling parameter to solve this problem.");
-                    $this->setReturnCode(self::RETCODE_MISSING_USERS);
-                    return;
-                }
+        if (array_key_exists("users", $opts['actions'])) {
+            switch ($opts['user-handling']) {
+                case 'create':
+                    $this->createUsers(false);
+                    break;
+                case 'with-password':
+                    $this->createUsers(true);
+                    break;
+                case 'skip':
+                    break;
+                default:
+                    if (count($this->missingUsers(true)) > 0) {
+                        $this->_log->end();
+                        $this->_log->log("Restore will not continue, missing users on server found. Change --user-handling parameter to solve this problem.");
+                        $this->setReturnCode(self::RETCODE_MISSING_USERS);
+                        return;
+                    }
+            }
+        } else {
+            $log->subtask()->log("skip 'users' because of --action parameter");
         }
 
         // drop database if requested
@@ -624,7 +628,11 @@ SQL;
 
         // create grants
         $log->start("GRANTS apply");
-        $this->grantPermissions("grants");
+        if (array_key_exists("grants", $opts['actions'])) {
+            $this->grantPermissions("grants");
+        } else {
+            $log->subtask()->log("skip 'grants' because of --action parameter");
+        }
 
         /*
         // finish import
@@ -828,6 +836,7 @@ SQL
     function execSqlFromFolder($subPath, $tryRepeat = false)
     {
         if (!array_key_exists($subPath, $this->_opts['actions'])) {
+            $this->_log->subtask()->log("skip '$subPath' because of --action parameter");
             return;
         }
         $path = $this->_backupFolder . $subPath . DIRECTORY_SEPARATOR;

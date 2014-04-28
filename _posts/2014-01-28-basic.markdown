@@ -1,11 +1,9 @@
 ---
 layout: post
-title:  "1. Basic"
+title:  "1. Basic Usage"
 date:   2014-01-28 09:00:01
 categories: tutorial
 ---
-
-## Usage
 
 To run backup you need to execute following command:
 

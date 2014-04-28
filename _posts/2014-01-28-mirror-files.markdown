@@ -18,7 +18,7 @@ storage.target.basedir=/mnt/nas
 storage.target.class = Storage_Filesystem
 compare.sqlite.file=~/xtbackup.db
 
-; engine.outputs[]=cli
+engine.outputs[]=cli
 engine.local=filesystem
 engine.remote=target
 engine.compare=sqlite

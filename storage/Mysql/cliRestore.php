@@ -33,7 +33,7 @@ tr- triggers
 g - permission grants
 TXT
         ),
-        'user-handling' => array('switch' => array('user-handling'), 'type' => GETOPT_VAL, 'default' => 'check', 'help' => '(check|create|with-password|only-list) how to restore user accounts'),
+        'user-handling' => array('switch' => array('user-handling'), 'type' => GETOPT_VAL, 'default' => 'check', 'help' => '(check|create|with-password|skip|only-list) how to restore user accounts'),
         'create-index' => array('switch' => array('create-index'), 'type' => GETOPT_VAL, 'default' => 'before', 'help' => '(before|after) data load'),
         'filter-ext' => array('switch' => array('F', 'filter-ext'), 'type' => GETOPT_VAL, 'help' => 'external command which returns 1 if object action should be processes'),
         'clone-to' => array('switch' => array('C', 'clone-to'), 'type' => GETOPT_VAL, 'help' => 'provide folder where you want to copy backup data, filter will be applied, if value ends with zip data will be compressed'),
@@ -231,6 +231,7 @@ class RestoreMysql
             case "check":
             case "create":
             case "with-password":
+            case "skip":
                 break;
             default:
                 throw new Exception("Unknown --user-handling parameter '" . $this->_opts['user-handling'] . "'.");
@@ -523,6 +524,8 @@ class RestoreMysql
                 break;
             case 'with-password':
                 $this->createUsers(true);
+                break;
+            case 'skip':
                 break;
             default:
                 if (count($this->missingUsers(true))>0) {

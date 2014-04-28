@@ -31,7 +31,12 @@ require_once 'core/Engine.php';
 // show help message
 $helpIdx = array_search("--help", $argv);
 if (false!==$helpIdx) {
-    echo "TODO some help text for this command line application\n";
+    echo "Setup INI files as explained here http://k2s.github.io/xtbackup/index.html\n";
+    echo "then to run it use 'php -f xtbackup.php -- ini[]=myconfig.ini'\n";
+    echo "You can combine multiple INI files like this: 'php -f xtbackup.php -- ini[]=myconfig.ini ini[]=accesscredentials.ini'\n\n";
+    echo "You can override INI setting by adding parameter to the end of command for example: \n";
+		echo "'php -f xtbackup.php -- ini[]=myconfig.ini ini[]=accesscredentials.ini storage.s3.update=true'\n";
+    echo "overrides 'storage.s3.update' that is setup within INI files.\n";
     exit(Core_StopException::RETCODE_OK);
 }
 

@@ -52,4 +52,56 @@ Parameters:
 <code>--log-sql-exec</code>	-	print executed SQL statements (0=off, 1=all, 2=if SQL warning found)  
 <code>-?, --help</code> - display instruction how to use cli.php  
 
+Quite nice functionality mainly useful for developers is a option to apply filters on data you want importing. That way you don't need to import huge log tables that 
+you don't really need on your local machine.
+
+The way you would go about it is as follows. First create filter file, php example below(can be any other type that will respond correctly).
+
+{% highlight php linenos %}
+<?php
+$dbName = $argv[1];
+$action = $argv[2];
+$objectName = $argv[3];
+
+switch ($action) {
+   case "test":
+       // control value
+       exit(123);
+   case "data":
+       // restrict what data we want to import
+       if ($objectName[0]=="_") {
+           exit(0);
+       }
+
+       if (substr($objectName, 0, 3)=="log_") {
+           exit(0);
+       }
+
+       break;
+}
+
+exit(1);
+
+{% endhighlight %}
+
+lines 2-4 setup variables to receive input
+
+lines 7-9 in order for filter file to be accepted it needs correctly respond to test challenge (response must be '123')
+
+lines 12,16 add conditions that checks if current object should be skipped 
+ 
+lines 13,17 exist with code 0 to skip operation on given object
+
+line 23 exist with code 1 to continue operations on current object
+
+To run it you can use this command:
+``` ini
+php -f ~/backup/restore.php -- --drop-db -h localhost -u root -p -F "php -f ~/backup/filter.php " ~/backup/
+```
+
+Of course you can run script on the backup to remove actual data from backup before you download it. You could go about in this way:
+
+``` ini
+php -f ~/backup/restore.php -- --clone-to "~/backup/filtered" -F "php -f ~/backup/filter.php " ~/backup/
+```
 

@@ -443,8 +443,7 @@ class RestoreMysql
         $this->validateOpts($this->_opts, self::VALIDATE_CLONE);
 
         $path = $this->_backupFolder;
-        $dstFolder = ltrim($this->_opts['clone-to'], "/\\") . DIRECTORY_SEPARATOR;
-        self::tildeToHome($dstFolder);
+        $dstFolder = $this->_fixFolderName($this->_opts['clone-to']);
         @mkdir($dstFolder, 0777, true);
 
         // check that the target folder is empty

@@ -468,7 +468,7 @@ class RestoreMysql
                     copy($path . $subPath, $dstFolder . $subPath);
                 } elseif ($subPath != "." && $subPath != "..") {
                     // actions
-                    if (!array_key_exists($subPath, $this->_opts['actions'])) {
+                    if ($subPath !== "db" && !array_key_exists($subPath, $this->_opts['actions'])) {
                         // not configured to be processed in --actions
                         continue;
                     }

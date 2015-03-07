@@ -15,7 +15,7 @@ class Core_Engine
      * Major and minor version should be set here.
      * If revision number is question mark getVersion() will try to determine it from git.
      */
-    const VERSION = "0.8.1";
+    const VERSION = "0.8.2";
 
     const ROLE_REMOTE = "remote";
     const ROLE_LOCAL = "local";

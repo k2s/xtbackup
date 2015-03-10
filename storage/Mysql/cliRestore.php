@@ -19,6 +19,7 @@ try {
         'drop-db' => array('switch' => array('drop-db'), 'type' => GETOPT_SWITCH, 'help' => 'will drop DB if exists'),
         'no-data' => array('switch' => array('no-data'), 'type' => GETOPT_SWITCH, 'help' => 'skip data import'),
         'force-local-server' => array('switch' => array('force-local-server'), 'type' => GETOPT_SWITCH, 'help' => 'force data load to use method optimal for local server'),
+        'use-mysql-client' => array('switch' => array('use-mysql-client'), 'type' => GETOPT_SWITCH, 'help' => 'data will be loaded by calling mysql client utility (see php bug #62889)'),
         'actions' => array('switch' => array('a', 'actions'), 'type' => GETOPT_VAL, 'default' => 'u,f,t,i,d,r,v,p,tr,g', 'help' => <<<TXT
 restore actions to execute (default is u,f,t,i,d,r,v,p,tr,g):
 u - users
@@ -190,6 +191,10 @@ class RestoreMysql
      * @var string
      */
     protected $_originalDbName;
+    /**
+     * @var string
+     */
+    protected $_mysqlCli;
 
     const VALIDATE_RESTORE = 0;
     const VALIDATE_DECOMPRESS = 1;
@@ -337,10 +342,14 @@ class RestoreMysql
         if ($this->_opts['socket']) {
             // connect over socket
             $dsn = "mysql:unix_socket=" . $this->_opts['socket'] . ";dbname=mysql";
+            $this->_mysqlCli = "mysql -S " . $this->_opts['socket'];
         } else {
             // connect over TCP/IP
             $dsn = "mysql:host=" . $this->_opts['host'] . ";port=" . $this->_opts['port'] . ";dbname=mysql";
+            $this->_mysqlCli = "mysql -h " . $this->_opts['host'] . " -P " . $this->_opts['port'];
         }
+        $this->_mysqlCli .= " --local-infile -u " . $this->_opts['user'] . " -p" . $this->_opts['password'];
+
         $this->_db = new DbWrapper(
             new PDO(
                 $dsn,
@@ -512,8 +521,8 @@ class RestoreMysql
         // prepare shorter variable names
         $log = $this->_log;
         $db = $this->_db;
-        $opts = & $this->_opts;
-        $folder = & $this->_backupFolder;
+        $opts = &$this->_opts;
+        $folder = &$this->_backupFolder;
 
         // create users
         $log->start("USERS create");
@@ -541,7 +550,7 @@ class RestoreMysql
 
         // drop database if requested
         if ($opts['drop-db']) {
-            $log->start("DB drop");
+            $log->start("DB drop database $opts[database]");
             $this->_db->exec("DROP DATABASE IF EXISTS `$opts[database]`");
         }
 
@@ -561,6 +570,7 @@ class RestoreMysql
 
         // change to DB
         $db->exec("use `$opts[database]`");
+        $this->_mysqlCli .= " $opts[database]";
 
         // prepare import
         $sql = <<<SQL
@@ -766,6 +776,8 @@ SQL;
 
     function importDataFromFolder($isLocalHost, $subPath, $truncate = true)
     {
+        $directClient = $this->_opts['use-mysql-client'];
+
         $path = $this->_backupFolder . $subPath . DIRECTORY_SEPARATOR;
         if (file_exists($path) && false !== ($handle = opendir($path))) {
             while (false !== ($fn = readdir($handle))) {
@@ -795,10 +807,14 @@ SQL;
                     // TODO LINES TERMINATED BY should maybe be configurable on command line or stored in/db/_config
                     // ALTER TABLE `$fn` DISABLE KEYS; ALTER TABLE `$fn` ENABLE KEYS;
                     $local = $isLocalHost ? "" : "LOCAL";
-                    $this->_db->exec(<<<SQL
+                    $sql = <<<SQL
 LOAD DATA $local INFILE '$fullFn' INTO TABLE `$fn` CHARACTER SET UTF8 LINES TERMINATED BY '\r\n';
-SQL
-                    );
+SQL;
+                    if ($directClient) {
+                        exec("echo " . escapeshellarg($sql) . " | " . $this->_mysqlCli);
+                    } else {
+                        $this->_db->exec($sql);
+                    }
                     $task->end();
 
                     // maybe delete some files after import

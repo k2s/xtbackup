@@ -221,7 +221,7 @@ class RestoreMysql
     protected function _fixFolderName($folder)
     {
         self::tildeToHome($folder);
-        return rtrim(realpath($folder), "/\\") . DIRECTORY_SEPARATOR;
+        return rtrim(realpath($folder) ?: $folder, "/\\") . DIRECTORY_SEPARATOR;
     }
 
     public function validateOpts($opts, $action = self::VALIDATE_RESTORE)

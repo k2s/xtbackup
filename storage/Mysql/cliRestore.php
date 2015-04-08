@@ -995,9 +995,16 @@ SQL;
     {
         $dbName = $this->_opts['database'];
         if (($f = fopen($this->_backupFolder . '/users/grants', "r")) !== FALSE) {
+            $this->_log->log("trying to apply permissions:");
             while (($d = fgetcsv($f, 1000, ",")) !== FALSE) {
                 $sql = "GRANT $d[0] ON `$dbName`$d[1] TO $d[2] $d[3]";
-                $this->_db->exec($sql);
+                $this->_log->log(">$sql;");
+                // TODO it was wrong not to store DB name because we need to handle GLOBAL PRIVILEGES
+//                try {
+//                    $this->_db->exec($sql);
+//                } catch (PDOException $e) {
+//                    $this->_log->log("! error: " . $e->getMessage());
+//                }
             }
             fclose($f);
         }

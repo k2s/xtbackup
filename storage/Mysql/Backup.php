@@ -284,8 +284,6 @@ TXT
             foreach ($q->fetchAll(PDO::FETCH_NUM) as $o) {
                 $p = $this->_parseGrant($o[0]);
                 if ($p['db'] === "*" || $p['db'] === $this->_dbName) {
-                    // we don't need to remeber db name
-                    unset($p['db']);
                     // add user to unique list for user creation
                     if (!array_key_exists($p['to'], $userList)) {
                         $userList[$p['to']] = $p['to'] . ":";

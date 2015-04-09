@@ -997,14 +997,28 @@ SQL;
         if (($f = fopen($this->_backupFolder . '/users/grants', "r")) !== FALSE) {
             $this->_log->log("trying to apply permissions:");
             while (($d = fgetcsv($f, 1000, ",")) !== FALSE) {
-                $sql = "GRANT $d[0] ON `$dbName`$d[1] TO $d[2] $d[3]";
+                $sql = "GRANT $d[0] ON `$dbName`$d[2] TO $d[3] $d[4]";
                 $this->_log->log(">$sql;");
-                // TODO it was wrong not to store DB name because we need to handle GLOBAL PRIVILEGES
-//                try {
-//                    $this->_db->exec($sql);
-//                } catch (PDOException $e) {
-//                    $this->_log->log("! error: " . $e->getMessage());
-//                }
+                if ($d[1] === '*') {
+                    $this->_log->log(">> seams to be GLOBAL PRIVILEGE, but trying to apply for database");
+                }
+                try {
+                    $this->_db->exec($sql);
+                } catch (PDOException $e) {
+                    if ($e->errorInfo[1] == 1221) {
+                        $this->_log->log(">> failed, trying as GLOBAL PRIVILEGE");
+                        $sql = "GRANT $d[0] ON *$d[2] TO $d[3] $d[4]";
+                        $this->_log->log(">>$sql;");
+                        try {
+                            $this->_db->exec($sql);
+                        } catch (PDOException $e) {
+                            $this->_log->log("! error: " . $e->getMessage());
+                        }
+                    } else {
+                        // some other error
+                        $this->_log->log("! error: " . $e->getMessage());
+                    }
+                }
             }
             fclose($f);
         }

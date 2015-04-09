@@ -808,6 +808,7 @@ SQL;
                     // ALTER TABLE `$fn` DISABLE KEYS; ALTER TABLE `$fn` ENABLE KEYS;
                     $local = $isLocalHost ? "" : "LOCAL";
                     $sql = <<<SQL
+SET SESSION sql_mode = 'NO_AUTO_VALUE_ON_ZERO';
 LOAD DATA $local INFILE '$fullFn' INTO TABLE `$fn` CHARACTER SET UTF8 LINES TERMINATED BY '\r\n';
 SQL;
                     if ($directClient) {

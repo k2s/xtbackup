@@ -809,7 +809,7 @@ SQL;
                     $local = $isLocalHost ? "" : "LOCAL";
                     $sql = <<<SQL
 SET SESSION sql_mode = 'NO_AUTO_VALUE_ON_ZERO';
-LOAD DATA $local INFILE '$fullFn' INTO TABLE `$fn` CHARACTER SET UTF8 LINES TERMINATED BY '\r\n';
+LOAD DATA $local INFILE '$fullFn' INTO TABLE `$fn` CHARACTER SET UTF8 LINES TERMINATED BY '\n';
 SQL;
                     if ($directClient) {
                         exec("echo " . escapeshellarg($sql) . " | " . $this->_mysqlCli);

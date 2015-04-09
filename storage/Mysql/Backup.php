@@ -654,7 +654,7 @@ SQL;
 
             // store data in tab delimited format
             //fputcsv($f, $data, "\t", ' ');
-            fwrite($f, implode("\t", $data) . chr(13) . chr(10));
+            fwrite($f, implode("\t", $data) . chr(10));
         }
     }
 

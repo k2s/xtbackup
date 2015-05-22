@@ -52,6 +52,10 @@ Installation
 * dry run with : `php -f xtbackup.php ini[]=/path_to/s3access.ini ini[]=/path_to/minimal.ini`
 * to really upload files: `php -f xtbackup.php ini[]=/path_to/s3access.ini ini[]=/path_to/minimal.ini storage.s3.update=true`
 
+### Docker
+
+There is Docker image in [Doicker registry](https://registry.hub.docker.com/u/bigm/xtbackup/) . 
+
 Configuration
 -------------
 

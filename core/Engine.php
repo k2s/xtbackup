@@ -377,7 +377,7 @@ class Core_Engine
             self::$out->stop("Definition for storage driver '$key' not found.");
         }
 
-        $params = $this->_options['storage'][$key];
+        $params = array_key_exists($key, $this->_options['storage']) ? $this->_options['storage'][$key] : array();
         if (isset($params['class'])) {
             $class = "Storage_" . ucfirst($params['class']);
         } else {
@@ -487,11 +487,15 @@ class Core_Engine
             function ($className) {
                 $path = str_replace("_", "/", $className);
                 $path[0] = strtolower($path[0]);
-                if (!@file_exists($path . '.php')) {
+//                if (!@file_exists($path . '.php')) {
+//                    return false;
+//                }
+                /** @noinspection PhpIncludeInspection */
+                try {
+                    require_once($path . '.php');
+                } catch (Exception $e) {
                     return false;
                 }
-                /** @noinspection PhpIncludeInspection */
-                require_once($path . '.php');
                 return true;
             }
         );

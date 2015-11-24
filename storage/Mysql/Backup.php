@@ -29,6 +29,12 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
     protected $_serverLocation = 'auto';
 
     /**
+     * Exclude table data from export
+     * @var bool
+     */
+    protected $_noData = false;
+
+    /**
      * @var Output_Interface
      */
     protected $_out;
@@ -104,6 +110,10 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
     function setServerLocation($serverLocation)
     {
         $this->_serverLocation = $serverLocation;
+    }
+
+    function setNoData($nodata) {
+        $this->_noData = $nodata;
     }
 
     function addRestoreScript($folder)
@@ -553,7 +563,10 @@ SQL;
 
     protected function _backupData($store)
     {
-        // TODO detect if server is localhost and if it is possible to use faster local backup command
+        if (true) {
+            return;
+        }
+
         switch ($this->_serverLocation) {
             case 'local':
                 $this->_out->logNotice("doing 'local' data backup");

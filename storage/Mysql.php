@@ -61,7 +61,8 @@ class Storage_Mysql extends Storage_Filesystem implements Storage_Mysql_IStore
                 'rotate' => array('days' => 0, 'weeks' => 0, 'months' => 0),
                 'filter-ext' => false,
                 'with-passwords' => false,
-                'server-location' => 'auto'
+                'server-location' => 'auto',
+                'no-data' => false,
             ),
             CfgPart::DESCRIPTIONS => array(
                 'host' => 'mysql server host name',
@@ -85,7 +86,8 @@ TXT
                 'rotate.months' => 'for how many months should backups be kept',
                 'filter-ext' => "specify external filter application like 'php -f filter.php -- '",
                 'with-passwords' => 'if true hash of user passwords will be stored',
-                'server-location' => 'if server is able to access backup folder (auto=try to detect,local=server able to write to backup folder,remote=slower as local)'
+                'server-location' => 'if server is able to access backup folder (auto=try to detect,local=server able to write to backup folder,remote=slower as local)',
+                'no-data' => 'if used data from tables will not be included in backup',
             ),
             CfgPart::REQUIRED => array('dbname')
         );
@@ -249,6 +251,10 @@ TXT
             if (!array_key_exists('server-location', $dbConfig)) {
                 $dbConfig['server-location'] = $this->_options['server-location'];
             }
+            if (!array_key_exists('no-data', $dbConfig)) {
+                $dbConfig['no-data'] = $this->_options['no-data'];
+            }
+
         }
 
         // backup database(s)
@@ -262,6 +268,7 @@ TXT
             $this->_driver->setFilterExt($dbConfig['filter-ext']);
             $this->_driver->setWithPasswords($dbConfig['with-passwords']);
             $this->_driver->setServerLocation($dbConfig['server-location']);
+            $this->_driver->setNoData($dbConfig['no-data']);
 
             $createForced = false;
             if ($dbConfig['addtobasedir']) {

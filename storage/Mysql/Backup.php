@@ -569,10 +569,6 @@ SQL;
 
     protected function _backupData($store)
     {
-        if (true) {
-            return;
-        }
-
         switch ($this->_serverLocation) {
             case 'local':
                 $this->_out->logNotice("doing 'local' data backup");

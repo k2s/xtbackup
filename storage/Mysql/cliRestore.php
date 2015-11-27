@@ -291,7 +291,7 @@ class RestoreMysql
             return 1;
         }
 
-        $cmd .= " " . $this->_opts['database'] . " $action $objName";
+        $cmd .= " " . escapeshellarg($this->_opts['database']) . ' ' . escapeshellarg($action) . ' '. escapeshellarg($objName);
         $output = array();
         $ret = null;
         exec($cmd, $output, $ret);
@@ -393,7 +393,12 @@ class RestoreMysql
 
                     if ($parts["extension"] === $removeExt) {
                         // check external
-                        if (1 !== $this->_filterExt($subPath, $parts["basename"])) {
+                        $r = $this->_filterExt($subPath, $parts["basename"]);
+                        if (1 !== $r) {
+                            if ($r === 2) {
+                                $this->_out->logError("$subPath: external filter requested stop on '$parts[filename]'");
+                                die;
+                            }
                             $this->_log->subtask()->log("$subPath: skip '$parts[filename]' because of external filter");
                             continue;
                         }

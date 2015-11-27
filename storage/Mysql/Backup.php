@@ -130,7 +130,12 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
             // apply external filter
             foreach ($this->_cachedObjectsToBackup as $kind => &$objects) {
                 foreach ($objects as $k => $v) {
-                    if (1 !== $this->_filterExt($kind, $v)) {
+                    $r = $this->_filterExt($kind, $v);
+                    if (1 !== $r) {
+                        if ($r === 2) {
+                            $this->_out->logError("$kind: external filter requested stop on '$v'");
+                            die;
+                        }
                         $this->_out->logNotice("$kind: skip '$v' because of external filter");
                         unset($objects[$k]);
                         continue;
@@ -186,8 +191,9 @@ class Storage_Mysql_Backup implements Storage_Mysql_IBackup
             return 1;
         }
 
-        $cmd .= $this->_dbName . " $action $objName";
-        $output = $ret = null;
+        $cmd .= escapeshellarg($this->_dbName) . ' ' . escapeshellarg($action) . ' '. escapeshellarg($objName);
+        $output = array();
+        $ret = null;
         exec($cmd, $output, $ret);
         if ($output) {
             $this->_out->logError("Error output from external filter:" . PHP_EOL . implode(PHP_EOL, $output));

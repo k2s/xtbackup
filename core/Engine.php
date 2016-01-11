@@ -15,7 +15,7 @@ class Core_Engine
      * Major and minor version should be set here.
      * If revision number is question mark getVersion() will try to determine it from git.
      */
-    const VERSION = "0.8.6";
+    const VERSION = "0.8.7";
 
     const ROLE_REMOTE = "remote";
     const ROLE_LOCAL = "local";
@@ -487,15 +487,10 @@ class Core_Engine
             function ($className) {
                 $path = str_replace("_", "/", $className);
                 $path[0] = strtolower($path[0]);
-//                if (!@file_exists($path . '.php')) {
-//                    return false;
-//                }
-                /** @noinspection PhpIncludeInspection */
-                try {
-                    require_once($path . '.php');
-                } catch (Exception $e) {
+                if (!@include_once($path . '.php')) {
                     return false;
                 }
+
                 return true;
             }
         );

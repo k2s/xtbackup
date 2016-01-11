@@ -1,12 +1,17 @@
 <?php
-// make sure we will find include files
-set_include_path(realpath(dirname(__FILE__)));
 /**
  * gets files from s3 server
  * usage example: php -f xts3get.php access="******" secret="**********" bucket="xtartem" basedir="/home/mamay/Documents/test/xs3get" remoteBasedir="files"
  *
  * @package Xtbackup
  */
+
+// make sure we will find include files
+set_include_path(realpath(dirname(__FILE__)));
+
+// don't search for ~.aws/sdk/config.inc.php which causes open_basedir problem
+define('AWS_DISABLE_CONFIG_AUTO_DISCOVERY', true);
+
 require "lib/AWSSDKforPHP/sdk.class.php";
 
 /**

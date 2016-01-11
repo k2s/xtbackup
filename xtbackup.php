@@ -11,6 +11,9 @@
 // make sure we will find include files
 set_include_path(realpath(dirname(__FILE__)));
 
+// don't search for ~.aws/sdk/config.inc.php which causes open_basedir problem
+define('AWS_DISABLE_CONFIG_AUTO_DISCOVERY', true);
+
 // make some more adjustments to PHP configuration
 ini_set('display_startup_errors', true);
 ini_set('display_errors', true);
